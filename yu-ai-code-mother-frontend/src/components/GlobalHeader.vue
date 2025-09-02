@@ -5,8 +5,8 @@
       <a-col flex="200px">
         <RouterLink to="/">
           <div class="header-left">
-            <img class="logo" src="@/assets/logo.png" alt="Logo" />
-            <h1 class="site-title">鱼皮应用生成</h1>
+            <img class="logo" src="@/assets/logo.jpg" alt="Logo" />
+            <h1 class="site-title">壹句建站</h1>
           </div>
         </RouterLink>
       </a-col>
@@ -84,8 +84,8 @@ const originItems = [
   },
   {
     key: 'others',
-    label: h('a', { href: 'https://www.codefather.cn', target: '_blank' }, '编程导航'),
-    title: '编程导航',
+    label: h('a', { href: 'https://www.bilibili.com', target: '_blank' }, '博客'),
+    title: '博客',
   },
 ]
 
