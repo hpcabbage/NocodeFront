@@ -84,7 +84,7 @@ const originItems = [
   },
   {
     key: 'others',
-    label: h('a', { href: 'https://www.bilibili.com', target: '_blank' }, '博客'),
+    label: h('a', { href: 'http://www.cabbageblog.top/', target: '_blank' }, '博客'),
     title: '博客',
   },
 ]

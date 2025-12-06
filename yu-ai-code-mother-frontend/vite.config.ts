@@ -15,7 +15,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://175.27.255.222:8123',
+        target: 'http://cabbagehp.online',
         changeOrigin: true,
         secure: false,
       },

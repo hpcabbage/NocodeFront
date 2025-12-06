@@ -4,10 +4,10 @@
 import { CodeGenTypeEnum } from "@/utils/codeGenTypes.ts";
 
 // 应用部署域名
-export const DEPLOY_DOMAIN = import.meta.env.VITE_DEPLOY_DOMAIN || 'http://175.27.255.222:81'
+export const DEPLOY_DOMAIN = import.meta.env.VITE_DEPLOY_DOMAIN || 'http://cabbagehp.online:81'
 
 // API 基础地址
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://175.27.255.222:8123/api'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://cabbagehp.online/api'
 
 // 静态资源地址
 export const STATIC_BASE_URL = `${API_BASE_URL}/static`

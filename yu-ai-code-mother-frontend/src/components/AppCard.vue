@@ -6,10 +6,18 @@
         <span>🤖</span>
       </div>
       <div class="app-overlay">
-        <a-space>
-          <a-button type="primary" @click="handleViewChat">查看对话</a-button>
-          <a-button v-if="app.deployKey" type="default" @click="handleViewWork">查看作品</a-button>
+        <a-space v-if="!featured">
+          <a-button @click="handleViewChat">查看对话</a-button>
+          <a-button v-if="app.deployKey" @click="handleViewWork">查看作品</a-button>
         </a-space>
+        <a-button 
+          v-else
+          type="primary" 
+          style="width: 120px"
+          @click="handleViewWork"
+        >
+          查看作品
+        </a-button>
       </div>
     </div>
     <div class="app-info">
