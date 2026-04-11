@@ -263,6 +263,7 @@ declare namespace API {
     userAvatar?: string
     userProfile?: string
     userRole?: string
+    userPassword?: string
   }
 
   type UserVO = {
