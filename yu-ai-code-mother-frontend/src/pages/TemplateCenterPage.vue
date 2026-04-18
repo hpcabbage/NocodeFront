@@ -36,6 +36,15 @@ const editForm = reactive({
 
 const isLogin = computed(() => !!loginUserStore.loginUser.id)
 const isAdmin = computed(() => loginUserStore.loginUser.userRole === 'admin')
+const pageDescription = computed(() => {
+  if (activeView.value === 'mine') {
+    return '管理你保存的模板，可编辑、公开或删除。'
+  }
+  if (activeView.value === 'all') {
+    return '管理员视角，可查看并统一管理全部模板公开状态。'
+  }
+  return '选择一个公开模板作为起点，再继续用 AI 修改你的网站。'
+})
 
 const loadTemplates = async () => {
   loading.value = true
@@ -203,7 +212,7 @@ onMounted(async () => {
     <div class="page-header">
       <div>
         <h1>模板中心</h1>
-        <p>选择一个模板作为起点，再继续用 AI 修改你的网站。</p>
+        <p>{{ pageDescription }}</p>
       </div>
     </div>
 
@@ -263,11 +272,12 @@ onMounted(async () => {
           <div class="template-tags">
             <a-tag color="blue">{{ template.category || '未分类' }}</a-tag>
             <a-tag v-if="template.isPublic === 1" color="green">公开</a-tag>
+            <a-tag v-else-if="template.userId === loginUserStore.loginUser.id" color="orange">私有</a-tag>
             <a-tag v-else-if="isAdmin && activeView === 'all'" color="default">未公开</a-tag>
             <a-tag v-if="template.userId === loginUserStore.loginUser.id" color="purple">我的</a-tag>
             <a-tag v-if="activeView === 'public' && (template.useCount || 0) >= 1" color="gold">热门</a-tag>
           </div>
-          <span>使用 {{ template.useCount || 0 }} 次</span>
+          <span>{{ template.user?.userName || '匿名用户' }} · 使用 {{ template.useCount || 0 }} 次</span>
         </div>
         <div class="template-actions">
           <a-button type="primary" block @click="useTemplate(template)">使用模板</a-button>
@@ -276,7 +286,7 @@ onMounted(async () => {
             <a-button style="margin-top: 8px" block @click="toggleTemplatePublic(template)">
               {{ template.isPublic === 1 ? '取消公开' : '设为公开' }}
             </a-button>
-            <div class="action-tip">管理员可统一管理模板公开状态，未公开模板只在管理视图可见</div>
+            <div class="action-tip">管理员视图，可统一管理模板公开状态，未公开模板只在这里可见</div>
           </template>
 
           <template v-else-if="template.userId === loginUserStore.loginUser.id">
@@ -289,11 +299,13 @@ onMounted(async () => {
             >
               {{ template.isPublic === 1 ? '取消公开' : '公开模板' }}
             </a-button>
-            <div class="action-tip">这是你的模板，可继续修改信息，也可以决定是否公开给别人使用</div>
+            <div class="action-tip">
+              {{ template.isPublic === 1 ? '当前已公开，其他用户可以在公开模板中使用它。' : '当前仅自己可见，公开后其他用户也能使用。' }}
+            </div>
           </template>
 
-          <template v-if="activeView === 'public'">
-            <div class="action-tip">公开模板优先按使用次数和创建时间展示</div>
+          <template v-else-if="activeView === 'public'">
+            <div class="action-tip">公开模板优先按使用次数和创建时间展示，你可以直接拿来继续生成应用</div>
           </template>
 
           <a-popconfirm
