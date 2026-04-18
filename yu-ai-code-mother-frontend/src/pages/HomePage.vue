@@ -1,18 +1,21 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { useLoginUserStore } from '@/stores/loginUser'
 import { addApp, listMyAppVoByPage, listGoodAppVoByPage } from '@/api/appController'
 import { getDeployUrl } from '@/config/env'
 import AppCard from '@/components/AppCard.vue'
 
+const route = useRoute()
 const router = useRouter()
 const loginUserStore = useLoginUserStore()
 
 // 用户提示词
 const userPrompt = ref('')
 const creating = ref(false)
+const selectedTemplateId = ref<number | undefined>()
+const selectedTemplateName = ref('')
 
 // 我的应用数据
 const myApps = ref<API.AppVO[]>([])
@@ -35,6 +38,22 @@ const setPrompt = (prompt: string) => {
   userPrompt.value = prompt
 }
 
+const clearSelectedTemplate = () => {
+  selectedTemplateId.value = undefined
+  selectedTemplateName.value = ''
+  router.replace({ path: '/', query: {} })
+}
+
+watch(
+  () => route.query.templateId,
+  (value) => {
+    if (value) {
+      selectedTemplateId.value = Number(value)
+      selectedTemplateName.value = String(route.query.templateName || '')
+    }
+  },
+)
+
 // 优化提示词功能已移除
 
 // 创建应用
@@ -52,9 +71,16 @@ const createApp = async () => {
 
   creating.value = true
   try {
-    const res = await addApp({
-      initPrompt: userPrompt.value.trim(),
-    })
+    const payload: API.AppAddRequest = selectedTemplateId.value
+      ? {
+          templateId: selectedTemplateId.value,
+          customPrompt: userPrompt.value.trim(),
+        }
+      : {
+          initPrompt: userPrompt.value.trim(),
+        }
+
+    const res = await addApp(payload)
 
     if (res.data.code === 0 && res.data.data) {
       message.success('应用创建成功')
@@ -136,6 +162,11 @@ onMounted(() => {
   loadMyApps()
   loadFeaturedApps()
 
+  if (route.query.templateId) {
+    selectedTemplateId.value = Number(route.query.templateId)
+    selectedTemplateName.value = String(route.query.templateName || '')
+  }
+
   // 鼠标跟随光效
   const handleMouseMove = (e: MouseEvent) => {
     const { clientX, clientY } = e
@@ -166,15 +197,20 @@ onMounted(() => {
       </div>
 
       <!-- 用户提示词输入框 -->
+      <div v-if="selectedTemplateId" class="selected-template-bar">
+        <a-tag color="blue">当前模板：{{ selectedTemplateName || `模板 #${selectedTemplateId}` }}</a-tag>
+        <a-button type="link" @click="clearSelectedTemplate">取消模板</a-button>
+      </div>
       <div class="input-section">
         <a-textarea
           v-model:value="userPrompt"
-          placeholder="帮我创建个人博客网站"
+          :placeholder="selectedTemplateId ? '补充你希望在模板基础上增加或修改的要求' : '帮我创建个人博客网站'"
           :rows="4"
           :maxlength="1000"
           class="prompt-input"
         />
         <div class="input-actions">
+          <a-button type="default" size="large" @click="router.push('/templates')">模板中心</a-button>
           <a-button type="primary" size="large" @click="createApp" :loading="creating">
             <template #icon>
               <span>↑</span>
@@ -443,6 +479,14 @@ onMounted(() => {
 }
 
 /* 输入区域 */
+.selected-template-bar {
+  max-width: 800px;
+  margin: 0 auto 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .input-section {
   position: relative;
   margin: 0 auto 24px;

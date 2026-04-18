@@ -1,6 +1,8 @@
 declare namespace API {
   type AppAddRequest = {
     initPrompt?: string
+    templateId?: number
+    customPrompt?: string
   }
 
   type AppAdminUpdateRequest = {
@@ -39,6 +41,7 @@ declare namespace API {
     appName?: string
     cover?: string
     initPrompt?: string
+    templateId?: number
     codeGenType?: string
     deployKey?: string
     deployedTime?: string
@@ -94,6 +97,18 @@ declare namespace API {
   type BaseResponseString = {
     code?: number
     data?: string
+    message?: string
+  }
+
+  type BaseResponseSiteTemplateVO = {
+    code?: number
+    data?: SiteTemplateVO
+    message?: string
+  }
+
+  type BaseResponsePageSiteTemplateVO = {
+    code?: number
+    data?: PageSiteTemplateVO
     message?: string
   }
 
@@ -162,6 +177,10 @@ declare namespace API {
     id: number
   }
 
+  type getSiteTemplateVOByIdParams = {
+    id: number
+  }
+
   type listAppChatHistoryParams = {
     appId: number
     pageSize?: number
@@ -204,6 +223,74 @@ declare namespace API {
     totalPage?: number
     totalRow?: number
     optimizeCountQuery?: boolean
+  }
+
+  type PageSiteTemplateVO = {
+    records?: SiteTemplateVO[]
+    pageNumber?: number
+    pageSize?: number
+    totalPage?: number
+    totalRow?: number
+    optimizeCountQuery?: boolean
+  }
+
+  type SiteTemplateAddRequest = {
+    name?: string
+    description?: string
+    cover?: string
+    category?: string
+    initPrompt?: string
+    codeGenType?: string
+    templateSource?: string
+    sourceAppId?: number
+    isPublic?: number
+  }
+
+  type SiteTemplateCreateFromAppRequest = {
+    appId?: number
+    name?: string
+    description?: string
+    cover?: string
+    category?: string
+    isPublic?: number
+  }
+
+  type SiteTemplateAdminUpdateRequest = {
+    id?: number
+    isPublic?: number
+  }
+
+  type SiteTemplateQueryRequest = {
+    pageNum?: number
+    pageSize?: number
+    sortField?: string
+    sortOrder?: string
+    id?: number
+    name?: string
+    category?: string
+    codeGenType?: string
+    templateSource?: string
+    userId?: number
+    isPublic?: number
+    searchText?: string
+  }
+
+  type SiteTemplateVO = {
+    id?: number
+    name?: string
+    description?: string
+    cover?: string
+    category?: string
+    initPrompt?: string
+    codeGenType?: string
+    templateSource?: string
+    sourceAppId?: number
+    userId?: number
+    isPublic?: number
+    useCount?: number
+    createTime?: string
+    updateTime?: string
+    user?: UserVO
   }
 
   type ServerSentEventString = true

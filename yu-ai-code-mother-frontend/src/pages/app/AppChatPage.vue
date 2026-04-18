@@ -27,6 +27,9 @@
           </template>
           下载代码
         </a-button>
+        <a-button v-if="isOwner" type="default" @click="openSaveTemplateModal">
+          保存为模板
+        </a-button>
         <a-button type="primary" @click="deployApp" :loading="deploying">
           <template #icon>
             <CloudUploadOutlined />
@@ -206,11 +209,35 @@
         :deploy-url="deployUrl"
         @open-site="openDeployedSite"
     />
+
+    <a-modal
+        v-model:open="saveTemplateVisible"
+        title="保存为模板"
+        @ok="submitSaveTemplate"
+        :confirm-loading="savingTemplate"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="模板名称" required>
+          <a-input v-model:value="saveTemplateForm.name" placeholder="请输入模板名称" />
+        </a-form-item>
+        <a-form-item label="模板描述">
+          <a-textarea v-model:value="saveTemplateForm.description" :rows="3" placeholder="请输入模板描述" />
+        </a-form-item>
+        <a-form-item label="模板分类">
+          <a-select v-model:value="saveTemplateForm.category">
+            <a-select-option value="company">企业官网</a-select-option>
+            <a-select-option value="portfolio">作品集</a-select-option>
+            <a-select-option value="blog">博客</a-select-option>
+            <a-select-option value="landing">落地页</a-select-option>
+          </a-select>
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick, onUnmounted, computed } from 'vue'
+import { ref, onMounted, nextTick, onUnmounted, computed, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { useLoginUserStore } from '@/stores/loginUser'
@@ -219,6 +246,7 @@ import {
   deployApp as deployAppApi,
   deleteApp as deleteAppApi,
 } from '@/api/appController'
+import { createTemplateFromApp } from '@/api/templateController'
 import { listAppChatHistory } from '@/api/chatHistoryController'
 import { CodeGenTypeEnum, formatCodeGenType } from '@/utils/codeGenTypes'
 import request from '@/request'
@@ -298,10 +326,54 @@ const isAdmin = computed(() => {
 
 // 应用详情相关
 const appDetailVisible = ref(false)
+const saveTemplateVisible = ref(false)
+const savingTemplate = ref(false)
+const saveTemplateForm = reactive({
+  name: '',
+  description: '',
+  category: 'company',
+})
 
 // 显示应用详情
 const showAppDetail = () => {
   appDetailVisible.value = true
+}
+
+const openSaveTemplateModal = () => {
+  if (!appInfo.value?.id) return
+  saveTemplateForm.name = appInfo.value.appName ? `${appInfo.value.appName}模板` : '我的模板'
+  saveTemplateForm.description = appInfo.value.initPrompt || ''
+  saveTemplateForm.category = 'company'
+  saveTemplateVisible.value = true
+}
+
+const submitSaveTemplate = async () => {
+  if (!appInfo.value?.id) return
+  if (!saveTemplateForm.name.trim()) {
+    message.warning('请输入模板名称')
+    return
+  }
+  savingTemplate.value = true
+  try {
+    const res = await createTemplateFromApp({
+      appId: appInfo.value.id,
+      name: saveTemplateForm.name.trim(),
+      description: saveTemplateForm.description.trim(),
+      category: saveTemplateForm.category,
+      isPublic: 0,
+    })
+    if (res.data.code === 0) {
+      message.success('保存模板成功')
+      saveTemplateVisible.value = false
+    } else {
+      message.error('保存模板失败：' + res.data.message)
+    }
+  } catch (error) {
+    console.error('保存模板失败：', error)
+    message.error('保存模板失败')
+  } finally {
+    savingTemplate.value = false
+  }
 }
 
 // 加载对话历史
@@ -504,9 +576,21 @@ const generateCode = async (userMessage: string, aiMessageIndex: number) => {
       if (streamCompleted) return
 
       try {
-        // 解析JSON包装的数据
+        // 外层是 SSE 包装，内层是 ai_response JSON 字符串
         const parsed = JSON.parse(event.data)
-        const content = parsed.d
+        const rawContent = parsed.d
+
+        let content = rawContent
+        if (typeof rawContent === 'string') {
+          try {
+            const innerMessage = JSON.parse(rawContent)
+            if (innerMessage?.type === 'ai_response') {
+              content = innerMessage.data ?? ''
+            }
+          } catch {
+            content = rawContent
+          }
+        }
 
         // 拼接内容
         if (content !== undefined && content !== null) {
