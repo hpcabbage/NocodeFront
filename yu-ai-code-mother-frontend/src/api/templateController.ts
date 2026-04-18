@@ -54,6 +54,20 @@ export async function listSiteTemplateVoByPage(
   })
 }
 
+export async function updateSiteTemplate(
+  body: API.SiteTemplateUpdateRequest,
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseBoolean>('/template/update', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: body,
+    ...(options || {}),
+  })
+}
+
 export async function updateSiteTemplateByAdmin(
   body: API.SiteTemplateAdminUpdateRequest,
   options?: { [key: string]: any },

@@ -275,6 +275,15 @@ declare namespace API {
     searchText?: string
   }
 
+  type SiteTemplateUpdateRequest = {
+    id?: number
+    name?: string
+    description?: string
+    cover?: string
+    category?: string
+    isPublic?: number
+  }
+
   type SiteTemplateVO = {
     id?: number
     name?: string

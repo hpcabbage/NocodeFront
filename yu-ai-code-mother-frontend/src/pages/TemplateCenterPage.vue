@@ -5,6 +5,7 @@ import { message } from 'ant-design-vue'
 import {
   deleteSiteTemplate,
   listSiteTemplateVoByPage,
+  updateSiteTemplate,
   updateSiteTemplateByAdmin,
 } from '@/api/templateController'
 import { useLoginUserStore } from '@/stores/loginUser'
@@ -22,6 +23,14 @@ const query = reactive({
 })
 const page = reactive({
   total: 0,
+})
+const editVisible = ref(false)
+const editingTemplateId = ref<number | undefined>()
+const savingEdit = ref(false)
+const editForm = reactive({
+  name: '',
+  description: '',
+  category: undefined as string | undefined,
 })
 
 const isLogin = computed(() => !!loginUserStore.loginUser.id)
@@ -95,9 +104,50 @@ const toggleTemplatePublic = async (template: API.SiteTemplateVO) => {
   }
 }
 
-const canDeleteTemplate = (template: API.SiteTemplateVO) => {
+const canManageTemplate = (template: API.SiteTemplateVO) => {
   if (!loginUserStore.loginUser.id) return false
   return isAdmin.value || template.userId === loginUserStore.loginUser.id
+}
+
+const canDeleteTemplate = (template: API.SiteTemplateVO) => {
+  return canManageTemplate(template)
+}
+
+const openEditModal = (template: API.SiteTemplateVO) => {
+  editingTemplateId.value = template.id
+  editForm.name = template.name || ''
+  editForm.description = template.description || ''
+  editForm.category = template.category || undefined
+  editVisible.value = true
+}
+
+const submitEdit = async () => {
+  if (!editingTemplateId.value) return
+  if (!editForm.name.trim()) {
+    message.warning('请输入模板名称')
+    return
+  }
+  savingEdit.value = true
+  try {
+    const res = await updateSiteTemplate({
+      id: editingTemplateId.value,
+      name: editForm.name.trim(),
+      description: editForm.description.trim() || undefined,
+      category: editForm.category || undefined,
+    })
+    if (res.data.code === 0) {
+      message.success('更新模板成功')
+      editVisible.value = false
+      await loadTemplates()
+    } else {
+      message.error('更新模板失败：' + res.data.message)
+    }
+  } catch (error) {
+    console.error('更新模板失败：', error)
+    message.error('更新模板失败')
+  } finally {
+    savingEdit.value = false
+  }
 }
 
 const removeTemplate = async (template: API.SiteTemplateVO) => {
@@ -204,7 +254,8 @@ onMounted(async () => {
           </template>
 
           <template v-else-if="template.userId === loginUserStore.loginUser.id">
-            <div class="action-tip">这是你的模板，可继续管理或后续编辑</div>
+            <a-button style="margin-top: 8px" block @click="openEditModal(template)">编辑模板</a-button>
+            <div class="action-tip">这是你的模板，可继续修改名称、描述和分类</div>
           </template>
 
           <template v-if="activeView === 'public'">
@@ -231,6 +282,30 @@ onMounted(async () => {
         @change="loadTemplates"
       />
     </div>
+
+    <a-modal
+      v-model:open="editVisible"
+      title="编辑模板"
+      @ok="submitEdit"
+      :confirm-loading="savingEdit"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="模板名称" required>
+          <a-input v-model:value="editForm.name" placeholder="请输入模板名称" />
+        </a-form-item>
+        <a-form-item label="模板描述">
+          <a-textarea v-model:value="editForm.description" :rows="3" placeholder="请输入模板描述" />
+        </a-form-item>
+        <a-form-item label="模板分类（可选）">
+          <a-select v-model:value="editForm.category" allow-clear placeholder="暂时不分类也可以">
+            <a-select-option value="company">企业官网</a-select-option>
+            <a-select-option value="portfolio">作品集</a-select-option>
+            <a-select-option value="blog">博客</a-select-option>
+            <a-select-option value="landing">落地页</a-select-option>
+          </a-select>
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
