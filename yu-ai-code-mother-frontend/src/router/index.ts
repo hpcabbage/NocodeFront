@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import HomePage from '@/pages/HomePage.vue'
 import UserLoginPage from '@/pages/user/UserLoginPage.vue'
 import UserRegisterPage from '@/pages/user/UserRegisterPage.vue'
@@ -8,10 +8,11 @@ import AppManagePage from '@/pages/admin/AppManagePage.vue'
 import AppChatPage from '@/pages/app/AppChatPage.vue'
 import AppEditPage from '@/pages/app/AppEditPage.vue'
 import TemplateCenterPage from '@/pages/TemplateCenterPage.vue'
+import TemplateDetailPage from '@/pages/TemplateDetailPage.vue'
 import ChatManagePage from "@/pages/admin/ChatManagePage.vue";
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
@@ -52,6 +53,11 @@ const router = createRouter({
       path: '/templates',
       name: '模板中心',
       component: TemplateCenterPage,
+    },
+    {
+      path: '/templates/:id',
+      name: '模板详情',
+      component: TemplateDetailPage,
     },
     {
       path: '/app/chat/:id',

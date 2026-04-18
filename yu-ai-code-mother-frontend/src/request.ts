@@ -28,12 +28,14 @@ myAxios.interceptors.response.use(
     // 未登录
     if (data.code === 40100) {
       // 不是获取用户信息的请求，并且用户目前不是已经在用户登录页面，则跳转到登录页面
-      if (
-        !response.request.responseURL.includes('user/get/login') &&
-        !window.location.pathname.includes('/user/login')
-      ) {
+      const currentRoute = `${window.location.pathname}${window.location.hash}`
+      if (!response.request.responseURL.includes('user/get/login') && !currentRoute.includes('/user/login')) {
         message.warning('请先登录')
-        window.location.href = `/user/login?redirect=${window.location.href}`
+        if (window.location.hash.startsWith('#/')) {
+          window.location.href = `${window.location.origin}${window.location.pathname}#/user/login?redirect=${encodeURIComponent(window.location.href)}`
+        } else {
+          window.location.href = `/user/login?redirect=${encodeURIComponent(window.location.href)}`
+        }
       }
     }
     return response
