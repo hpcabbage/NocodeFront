@@ -223,8 +223,8 @@
         <a-form-item label="模板描述">
           <a-textarea v-model:value="saveTemplateForm.description" :rows="3" placeholder="请输入模板描述" />
         </a-form-item>
-        <a-form-item label="模板分类">
-          <a-select v-model:value="saveTemplateForm.category">
+        <a-form-item label="模板分类（可选）">
+          <a-select v-model:value="saveTemplateForm.category" allow-clear placeholder="暂时不分类也可以">
             <a-select-option value="company">企业官网</a-select-option>
             <a-select-option value="portfolio">作品集</a-select-option>
             <a-select-option value="blog">博客</a-select-option>
@@ -331,7 +331,7 @@ const savingTemplate = ref(false)
 const saveTemplateForm = reactive({
   name: '',
   description: '',
-  category: 'company',
+  category: undefined as string | undefined,
 })
 
 // 显示应用详情
@@ -343,7 +343,7 @@ const openSaveTemplateModal = () => {
   if (!appInfo.value?.id) return
   saveTemplateForm.name = appInfo.value.appName ? `${appInfo.value.appName}模板` : '我的模板'
   saveTemplateForm.description = appInfo.value.initPrompt || ''
-  saveTemplateForm.category = 'company'
+  saveTemplateForm.category = undefined
   saveTemplateVisible.value = true
 }
 
@@ -359,7 +359,7 @@ const submitSaveTemplate = async () => {
       appId: appInfo.value.id,
       name: saveTemplateForm.name.trim(),
       description: saveTemplateForm.description.trim(),
-      category: saveTemplateForm.category,
+      category: saveTemplateForm.category || undefined,
       isPublic: 0,
     })
     if (res.data.code === 0) {
