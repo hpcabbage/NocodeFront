@@ -20,6 +20,7 @@ const query = reactive({
   pageSize: 9,
   category: undefined as string | undefined,
   searchText: '',
+  sortType: 'latest',
 })
 const page = reactive({
   total: 0,
@@ -58,7 +59,13 @@ const loadTemplates = async () => {
       isPublic: activeView.value === 'public' ? 1 : undefined,
     })
     if (res.data.code === 0 && res.data.data) {
-      templates.value = res.data.data.records || []
+      const records = [...(res.data.data.records || [])]
+      if (query.sortType === 'mostUsed') {
+        records.sort((a, b) => Number(b.useCount || 0) - Number(a.useCount || 0))
+      } else if (query.sortType === 'nameAsc') {
+        records.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+      }
+      templates.value = records
       page.total = Number(res.data.data.totalRow || 0)
     } else {
       message.error('加载模板失败：' + res.data.message)
@@ -81,6 +88,14 @@ const switchView = (view: 'public' | 'mine' | 'all') => {
     return
   }
   activeView.value = view
+  query.pageNum = 1
+  loadTemplates()
+}
+
+const resetFilters = () => {
+  query.searchText = ''
+  query.category = undefined
+  query.sortType = 'latest'
   query.pageNum = 1
   loadTemplates()
 }
@@ -243,7 +258,13 @@ onMounted(async () => {
           <a-select-option value="blog">博客</a-select-option>
           <a-select-option value="landing">落地页</a-select-option>
         </a-select>
+        <a-select v-model:value="query.sortType" style="width: 160px" @change="loadTemplates">
+          <a-select-option value="latest">最新创建</a-select-option>
+          <a-select-option value="mostUsed">使用次数最多</a-select-option>
+          <a-select-option value="nameAsc">名称 A-Z</a-select-option>
+        </a-select>
         <a-button type="primary" @click="loadTemplates" :loading="loading">搜索</a-button>
+        <a-button @click="resetFilters">清空筛选</a-button>
       </a-space>
     </a-card>
 
