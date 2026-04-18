@@ -27,6 +27,7 @@ const page = reactive({
 const editVisible = ref(false)
 const editingTemplateId = ref<number | undefined>()
 const savingEdit = ref(false)
+const publishingTemplateId = ref<number | undefined>()
 const editForm = reactive({
   name: '',
   description: '',
@@ -150,6 +151,31 @@ const submitEdit = async () => {
   }
 }
 
+const toggleMyTemplatePublic = async (template: API.SiteTemplateVO) => {
+  if (!template.id) return
+  publishingTemplateId.value = template.id
+  try {
+    const res = await updateSiteTemplate({
+      id: template.id,
+      name: template.name || '未命名模板',
+      description: template.description || undefined,
+      category: template.category || undefined,
+      isPublic: template.isPublic === 1 ? 0 : 1,
+    })
+    if (res.data.code === 0) {
+      message.success(template.isPublic === 1 ? '已取消公开' : '已设为公开')
+      await loadTemplates()
+    } else {
+      message.error('操作失败：' + res.data.message)
+    }
+  } catch (error) {
+    console.error('操作失败：', error)
+    message.error('操作失败')
+  } finally {
+    publishingTemplateId.value = undefined
+  }
+}
+
 const removeTemplate = async (template: API.SiteTemplateVO) => {
   if (!template.id) return
   try {
@@ -255,7 +281,15 @@ onMounted(async () => {
 
           <template v-else-if="template.userId === loginUserStore.loginUser.id">
             <a-button style="margin-top: 8px" block @click="openEditModal(template)">编辑模板</a-button>
-            <div class="action-tip">这是你的模板，可继续修改名称、描述和分类</div>
+            <a-button
+              style="margin-top: 8px"
+              block
+              @click="toggleMyTemplatePublic(template)"
+              :loading="publishingTemplateId === template.id"
+            >
+              {{ template.isPublic === 1 ? '取消公开' : '公开模板' }}
+            </a-button>
+            <div class="action-tip">这是你的模板，可继续修改信息，也可以决定是否公开给别人使用</div>
           </template>
 
           <template v-if="activeView === 'public'">
