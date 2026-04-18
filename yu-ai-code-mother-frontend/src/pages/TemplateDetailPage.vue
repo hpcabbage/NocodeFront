@@ -111,15 +111,18 @@ onMounted(() => {
           <a-card class="hero-card" :bordered="false">
             <div class="hero-top">
               <div class="title-row">
-                <div>
+                <div class="hero-main">
                   <div class="eyebrow">可复用模板</div>
                   <h1>{{ template.name || '未命名模板' }}</h1>
                   <p class="subtitle">{{ summaryText }}</p>
                 </div>
-                <div class="tag-row">
-                  <a-tag color="blue">{{ template.category || '未分类' }}</a-tag>
-                  <a-tag v-if="template.isPublic === 1" color="green">公开</a-tag>
-                  <a-tag v-if="template.userId" color="purple">作者：{{ template.user?.userName || '匿名用户' }}</a-tag>
+                <div class="hero-side">
+                  <div class="tag-row">
+                    <a-tag color="blue">{{ template.category || '未分类' }}</a-tag>
+                    <a-tag v-if="template.isPublic === 1" color="green">公开</a-tag>
+                    <a-tag v-if="template.userId" color="purple">作者：{{ template.user?.userName || '匿名用户' }}</a-tag>
+                  </div>
+                  <div class="hero-side-tip">已整理好模板描述与初始化提示词，可直接复用</div>
                 </div>
               </div>
 
@@ -157,8 +160,12 @@ onMounted(() => {
           </a-card>
 
           <a-card class="prompt-card" title="模板提示词" :bordered="false">
-            <div class="prompt-tip">这里展示的是模板的原始初始化提示词，你可以在使用模板后继续补充个性化要求。</div>
+            <div class="prompt-tip">这里展示的是模板的原始初始化提示词。建议先直接使用模板，再在对话里继续补充你的业务目标、风格和边界要求。</div>
             <div class="prompt-block">
+              <div class="prompt-toolbar">
+                <span class="prompt-chip">Init Prompt</span>
+                <span class="prompt-toolbar-tip">可作为首轮生成输入</span>
+              </div>
               <div class="prompt-content">{{ template.initPrompt || '暂无提示词内容' }}</div>
             </div>
           </a-card>
@@ -337,6 +344,29 @@ onMounted(() => {
   margin-bottom: 24px;
 }
 
+.hero-main {
+  flex: 1;
+}
+
+.hero-side {
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.hero-side-tip {
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #eff6ff 0%, #f8fbff 100%);
+  border: 1px solid #dbeafe;
+  color: #2563eb;
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: right;
+}
+
 .quick-meta-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -400,14 +430,39 @@ onMounted(() => {
 }
 
 .prompt-block {
-  background: #0f172a;
+  background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
   border-radius: 16px;
   padding: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.prompt-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.prompt-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.16);
+  color: #93c5fd;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.prompt-toolbar-tip {
+  color: #94a3b8;
+  font-size: 12px;
 }
 
 .prompt-content {
   white-space: pre-wrap;
-  line-height: 1.8;
+  line-height: 1.9;
   color: #e2e8f0;
   font-size: 14px;
 }
@@ -430,6 +485,15 @@ onMounted(() => {
 
   .title-row {
     flex-direction: column;
+  }
+
+  .hero-side {
+    align-items: flex-start;
+    min-width: 0;
+  }
+
+  .hero-side-tip {
+    text-align: left;
   }
 
   .tag-row {
