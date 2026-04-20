@@ -51,17 +51,22 @@
         <div class="version-panel">
           <div class="version-list-header">
             <h3>版本列表</h3>
-            <span class="version-count">共 {{ versionList.length }} 条</span>
+            <span class="version-count">共 {{ filteredVersionList.length }} 条</span>
           </div>
 
-          <a-empty v-if="!versionListLoading && versionList.length === 0" description="还没有版本记录" />
+          <div class="version-toolbar">
+            <a-switch v-model:checked="onlyStable" size="small" />
+            <span class="version-toolbar-text">只看稳定版本</span>
+          </div>
+
+          <a-empty v-if="!versionListLoading && filteredVersionList.length === 0" :description="onlyStable ? '还没有稳定版本' : '还没有版本记录'" />
 
           <div v-else class="version-list">
             <div
-              v-for="item in versionList"
+              v-for="item in filteredVersionList"
               :key="item.id"
               class="version-list-item"
-              :class="{ active: selectedVersion?.id === item.id }"
+              :class="{ active: selectedVersion?.id === item.id, current: item.currentVersion }"
               @click="selectVersion(item)"
             >
               <div class="version-list-item-top">
@@ -253,6 +258,7 @@ const updatingStable = ref(false)
 const versionList = ref<API.AppFrontendVersionVO[]>([])
 const selectedVersion = ref<API.AppFrontendVersionVO>()
 const latestUserMessage = ref('')
+const onlyStable = ref(false)
 
 const versionForm = reactive({
   versionTitle: '',
@@ -298,6 +304,11 @@ const getVersionLabelById = (versionId?: number) => {
   }
   return `#${versionId}`
 }
+
+const filteredVersionList = computed(() => {
+  if (!onlyStable.value) return versionList.value
+  return versionList.value.filter((item) => !!item.isStable)
+})
 
 const resetForms = () => {
   versionForm.versionTitle = ''
@@ -619,6 +630,18 @@ onMounted(async () => {
   font-size: 13px;
 }
 
+.version-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.version-toolbar-text {
+  color: #666;
+  font-size: 13px;
+}
+
 .version-list {
   max-height: 520px;
   overflow-y: auto;
@@ -638,6 +661,12 @@ onMounted(async () => {
 .version-list-item.active {
   border-color: #1677ff;
   box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.08);
+}
+
+.version-list-item.current {
+  border-color: #52c41a;
+  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.10);
+  background: #fcfff7;
 }
 
 .version-list-item-top {
