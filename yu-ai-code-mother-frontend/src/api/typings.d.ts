@@ -12,8 +12,71 @@ declare namespace API {
     priority?: number
   }
 
+  type AppCommitVersionRequest = {
+    appId?: number
+    versionTitle?: string
+    changeSummary?: string
+    userPrompt?: string
+  }
+
   type AppDeployRequest = {
     appId?: number
+  }
+
+  type AppFrontendVersionQueryRequest = {
+    appId?: number
+    pageNum?: number
+    pageSize?: number
+  }
+
+  type AppRollbackVersionRequest = {
+    versionId?: number
+    rollbackReason?: string
+  }
+
+  type AppSetVersionStableRequest = {
+    versionId?: number
+    isStable?: number
+  }
+
+  type AppFrontendVersionDiffVO = {
+    leftVersionId?: number
+    rightVersionId?: number
+    leftVersionNo?: number
+    rightVersionNo?: number
+    addedFiles?: string[]
+    removedFiles?: string[]
+    changedFiles?: string[]
+  }
+
+  type AppFrontendVersionFileDiffVO = {
+    leftVersionId?: number
+    rightVersionId?: number
+    filePath?: string
+    leftContent?: string
+    rightContent?: string
+  }
+
+  type AppFrontendVersionVO = {
+    id?: number
+    appId?: number
+    versionNo?: number
+    versionTitle?: string
+    changeSummary?: string
+    userPrompt?: string
+    codeGenType?: string
+    sourceType?: string
+    versionPath?: string
+    metaPath?: string
+    parentVersionNo?: number
+    sourceVersionId?: number
+    isStable?: number
+    currentVersion?: boolean
+    versionStatus?: string
+    metaInfo?: Record<string, string>
+    createdBy?: number
+    createTime?: string
+    updateTime?: string
   }
 
   type AppQueryRequest = {
@@ -52,6 +115,24 @@ declare namespace API {
     user?: UserVO
   }
 
+  type BaseResponseAppFrontendVersionDiffVO = {
+    code?: number
+    data?: AppFrontendVersionDiffVO
+    message?: string
+  }
+
+  type BaseResponseAppFrontendVersionFileDiffVO = {
+    code?: number
+    data?: AppFrontendVersionFileDiffVO
+    message?: string
+  }
+
+  type BaseResponseAppFrontendVersionVO = {
+    code?: number
+    data?: AppFrontendVersionVO
+    message?: string
+  }
+
   type BaseResponseAppVO = {
     code?: number
     data?: AppVO
@@ -73,6 +154,12 @@ declare namespace API {
   type BaseResponseLong = {
     code?: number
     data?: number
+    message?: string
+  }
+
+  type BaseResponsePageAppFrontendVersionVO = {
+    code?: number
+    data?: PageAppFrontendVersionVO
     message?: string
   }
 
@@ -161,6 +248,21 @@ declare namespace API {
     appId: number
   }
 
+  type getAppFrontendVersionDiffParams = {
+    leftVersionId: number
+    rightVersionId: number
+  }
+
+  type getAppFrontendVersionFileDiffParams = {
+    leftVersionId: number
+    rightVersionId: number
+    filePath: string
+  }
+
+  type getAppFrontendVersionVOByIdParams = {
+    versionId: number
+  }
+
   type getAppVOByIdByAdminParams = {
     id: number
   }
@@ -196,6 +298,15 @@ declare namespace API {
     userRole?: string
     createTime?: string
     updateTime?: string
+  }
+
+  type PageAppFrontendVersionVO = {
+    records?: AppFrontendVersionVO[]
+    pageNumber?: number
+    pageSize?: number
+    totalPage?: number
+    totalRow?: number
+    optimizeCountQuery?: boolean
   }
 
   type PageAppVO = {

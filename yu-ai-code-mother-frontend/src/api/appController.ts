@@ -86,6 +86,21 @@ export async function chatToGenCode(
   })
 }
 
+/** 此处后端没有提供注释 POST /app/commit/version */
+export async function commitAppVersion(
+  body: API.AppCommitVersionRequest,
+  options?: { [key: string]: any }
+) {
+  return request<API.BaseResponseAppFrontendVersionVO>('/app/commit/version', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: body,
+    ...(options || {}),
+  })
+}
+
 /** 此处后端没有提供注释 POST /app/delete */
 export async function deleteApp(body: API.DeleteRequest, options?: { [key: string]: any }) {
   return request<API.BaseResponseBoolean>('/app/delete', {
@@ -160,6 +175,93 @@ export async function listMyAppVoByPage(
   options?: { [key: string]: any }
 ) {
   return request<API.BaseResponsePageAppVO>('/app/my/list/page/vo', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: body,
+    ...(options || {}),
+  })
+}
+
+/** 此处后端没有提供注释 GET /app/version/diff */
+export async function getAppFrontendVersionDiff(
+  params: API.getAppFrontendVersionDiffParams,
+  options?: { [key: string]: any }
+) {
+  return request<API.BaseResponseAppFrontendVersionDiffVO>('/app/version/diff', {
+    method: 'GET',
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  })
+}
+
+/** 此处后端没有提供注释 GET /app/version/file-diff */
+export async function getAppFrontendVersionFileDiff(
+  params: API.getAppFrontendVersionFileDiffParams,
+  options?: { [key: string]: any }
+) {
+  return request<API.BaseResponseAppFrontendVersionFileDiffVO>('/app/version/file-diff', {
+    method: 'GET',
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  })
+}
+
+/** 此处后端没有提供注释 POST /app/version/stable */
+export async function setAppVersionStable(
+  body: API.AppSetVersionStableRequest,
+  options?: { [key: string]: any }
+) {
+  return request<API.BaseResponseAppFrontendVersionVO>('/app/version/stable', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: body,
+    ...(options || {}),
+  })
+}
+
+/** 此处后端没有提供注释 GET /app/version/get/vo */
+export async function getAppFrontendVersionVoById(
+  params: API.getAppFrontendVersionVOByIdParams,
+  options?: { [key: string]: any }
+) {
+  return request<API.BaseResponseAppFrontendVersionVO>('/app/version/get/vo', {
+    method: 'GET',
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  })
+}
+
+/** 此处后端没有提供注释 POST /app/version/list/page */
+export async function listAppFrontendVersionVoByPage(
+  body: API.AppFrontendVersionQueryRequest,
+  options?: { [key: string]: any }
+) {
+  return request<API.BaseResponsePageAppFrontendVersionVO>('/app/version/list/page', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: body,
+    ...(options || {}),
+  })
+}
+
+/** 此处后端没有提供注释 POST /app/version/rollback */
+export async function rollbackAppVersion(
+  body: API.AppRollbackVersionRequest,
+  options?: { [key: string]: any }
+) {
+  return request<API.BaseResponseAppFrontendVersionVO>('/app/version/rollback', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
