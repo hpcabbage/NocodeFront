@@ -1,11 +1,28 @@
 <template>
   <div class="app-version-page">
     <div class="page-header">
-      <div>
+      <div class="page-header-main">
         <div class="breadcrumb-link" @click="goBackToChat">← 返回应用对话</div>
-        <h1>{{ appInfo?.appName || '应用版本管理' }}</h1>
+        <div class="page-title-row">
+          <h1>{{ appInfo?.appName || '应用版本管理' }}</h1>
+          <a-tag v-if="selectedVersion?.currentVersion" color="green">当前版本已选中</a-tag>
+          <a-tag v-if="isDemoMode" color="purple">演示态</a-tag>
+        </div>
         <p>提交版本、查看版本详情，以及回滚到指定前端版本。</p>
-        <a-tag v-if="isDemoMode" color="purple" style="margin-top: 8px">演示态</a-tag>
+        <div class="page-header-summary">
+          <div class="summary-card">
+            <span class="summary-label">版本总数</span>
+            <span class="summary-value">{{ versionList.length }}</span>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">稳定版本</span>
+            <span class="summary-value">{{ versionList.filter((item) => item.isStable).length }}</span>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">当前版本</span>
+            <span class="summary-value">{{ selectedVersion?.versionNo ? `V${selectedVersion.versionNo}` : '-' }}</span>
+          </div>
+        </div>
       </div>
       <div class="header-actions">
         <a-button @click="goBackToChat">返回对话</a-button>
@@ -22,8 +39,11 @@
         style="margin-bottom: 16px"
       />
       <div v-if="!pageError" class="version-page-layout">
-        <div class="version-panel">
-          <h3>提交当前版本</h3>
+        <div class="version-panel version-panel-form">
+          <div class="panel-title-row">
+            <h3>提交当前版本</h3>
+            <span class="panel-title-tip">把当前前端结果保存成可回滚快照</span>
+          </div>
           <a-form layout="vertical">
             <a-form-item label="版本标题" required>
               <a-input v-model:value="versionForm.versionTitle" placeholder="比如：首页 banner 改版" />
@@ -48,9 +68,12 @@
           </a-form>
         </div>
 
-        <div class="version-panel">
+        <div class="version-panel version-panel-list">
           <div class="version-list-header">
-            <h3>版本列表</h3>
+            <div>
+              <h3>版本列表</h3>
+              <div class="version-list-subtitle">按时间倒序查看快照、稳定版本与回滚记录</div>
+            </div>
             <span class="version-count">共 {{ filteredVersionList.length }} 条</span>
           </div>
 
@@ -69,6 +92,7 @@
               :class="{ active: selectedVersion?.id === item.id, current: item.currentVersion }"
               @click="selectVersion(item)"
             >
+              <div class="version-list-item-accent"></div>
               <div class="version-list-item-top">
                 <span class="version-title">{{ item.versionTitle || `V${item.versionNo}` }}</span>
                 <a-tag color="blue">V{{ item.versionNo }}</a-tag>
@@ -86,11 +110,29 @@
         </div>
       </div>
 
-      <a-card v-if="!pageError && selectedVersion" title="版本详情" class="version-detail-card">
-        <div class="detail-tag-row">
-          <a-tag v-for="tag in getVersionTags(selectedVersion)" :key="tag.text" :color="tag.color">{{ tag.text }}</a-tag>
+      <a-card v-if="!pageError && selectedVersion" class="version-detail-card">
+        <div class="detail-hero">
+          <div>
+            <div class="detail-eyebrow">当前查看</div>
+            <div class="detail-title-row">
+              <h3>{{ selectedVersion.versionTitle || `V${selectedVersion.versionNo}` }}</h3>
+              <a-tag color="blue">V{{ selectedVersion.versionNo }}</a-tag>
+            </div>
+            <div class="detail-subtitle">
+              {{ formatSourceType(selectedVersion.sourceType) }}，创建于 {{ formatTime(selectedVersion.createTime) || '-' }}
+            </div>
+          </div>
+          <div class="detail-tag-row">
+            <a-tag v-for="tag in getVersionTags(selectedVersion)" :key="tag.text" :color="tag.color">{{ tag.text }}</a-tag>
+          </div>
         </div>
-        <a-descriptions :column="2" bordered size="small">
+
+        <div class="detail-section-card">
+          <div class="section-title-row">
+            <h4>版本信息</h4>
+            <span>查看当前版本的基础属性与来源关系</span>
+          </div>
+          <a-descriptions :column="2" bordered size="small">
           <a-descriptions-item label="版本号">V{{ selectedVersion.versionNo }}</a-descriptions-item>
           <a-descriptions-item label="状态">{{ selectedVersion.versionStatus || '-' }}</a-descriptions-item>
           <a-descriptions-item label="标题">{{ selectedVersion.versionTitle || '-' }}</a-descriptions-item>
@@ -109,10 +151,14 @@
           <a-descriptions-item label="Meta 文件" :span="2">{{ selectedVersion.metaPath || '-' }}</a-descriptions-item>
           <a-descriptions-item label="版本备注" :span="2">{{ selectedVersion.changeSummary || '-' }}</a-descriptions-item>
           <a-descriptions-item label="用户提示词" :span="2">{{ selectedVersion.userPrompt || '-' }}</a-descriptions-item>
-        </a-descriptions>
+          </a-descriptions>
+        </div>
 
-        <div class="meta-section">
-          <h4>Meta 信息</h4>
+        <div class="detail-section-card meta-section">
+          <div class="section-title-row">
+            <h4>Meta 信息</h4>
+            <span>记录生成器、分支等辅助元信息</span>
+          </div>
           <a-empty
             v-if="!selectedVersion.metaInfo || Object.keys(selectedVersion.metaInfo).length === 0"
             description="暂无 meta 信息"
@@ -124,8 +170,11 @@
           </a-descriptions>
         </div>
 
-        <div class="version-note-section">
-          <h4>版本说明</h4>
+        <div class="detail-section-card version-note-section">
+          <div class="section-title-row">
+            <h4>版本说明</h4>
+            <span>只保留快照说明，不展示代码差异</span>
+          </div>
           <a-alert
             type="info"
             show-icon
@@ -142,37 +191,47 @@
           </a-descriptions>
         </div>
 
-        <div class="rollback-section">
-          <h4>版本操作</h4>
-          <a-alert
-            type="success"
-            show-icon
-            :message="selectedVersion.isStable ? '这个版本当前已标记为稳定版本。' : '你可以把这个版本标记为稳定版本，方便后续快速识别和恢复。'"
-            style="margin-bottom: 12px"
-          />
-          <a-button :loading="updatingStable" @click="toggleStableVersion" style="margin-bottom: 16px">
-            {{ selectedVersion.isStable ? '取消稳定版本' : '标记为稳定版本' }}
-          </a-button>
-
-          <h4>回滚到当前版本</h4>
-          <a-alert
-            type="warning"
-            show-icon
-            message="回滚会覆盖当前应用输出内容，并生成一条新的回滚版本记录。"
-            style="margin-bottom: 12px"
-          />
-          <a-form layout="vertical">
-            <a-form-item label="回滚说明（可选）">
-              <a-textarea
-                v-model:value="rollbackForm.rollbackReason"
-                :rows="3"
-                placeholder="比如：最新改动有问题，先恢复到这个稳定版本"
-              />
-            </a-form-item>
-            <a-button type="primary" danger :loading="rollingBackVersion" @click="submitRollback">
-              回滚到这个版本
+        <div class="operation-section-grid rollback-section">
+          <div class="operation-card operation-card-safe">
+            <div class="section-title-row">
+              <h4>稳定版本操作</h4>
+              <span>用于标记可长期保留、便于识别的版本</span>
+            </div>
+            <a-alert
+              type="success"
+              show-icon
+              :message="selectedVersion.isStable ? '这个版本当前已标记为稳定版本。' : '你可以把这个版本标记为稳定版本，方便后续快速识别和恢复。'"
+              style="margin-bottom: 12px"
+            />
+            <a-button :loading="updatingStable" @click="toggleStableVersion">
+              {{ selectedVersion.isStable ? '取消稳定版本' : '标记为稳定版本' }}
             </a-button>
-          </a-form>
+          </div>
+
+          <div class="operation-card operation-card-warning">
+            <div class="section-title-row">
+              <h4>回滚到当前版本</h4>
+              <span>会覆盖当前应用输出，并生成新的回滚版本记录</span>
+            </div>
+            <a-alert
+              type="warning"
+              show-icon
+              message="回滚会覆盖当前应用输出内容，并生成一条新的回滚版本记录。"
+              style="margin-bottom: 12px"
+            />
+            <a-form layout="vertical">
+              <a-form-item label="回滚说明（可选)">
+                <a-textarea
+                  v-model:value="rollbackForm.rollbackReason"
+                  :rows="3"
+                  placeholder="比如：最新改动有问题，先恢复到这个稳定版本"
+                />
+              </a-form-item>
+              <a-button type="primary" danger :loading="rollingBackVersion" @click="submitRollback">
+                回滚到这个版本
+              </a-button>
+            </a-form>
+          </div>
         </div>
       </a-card>
     </a-card>
@@ -269,7 +328,6 @@ const versionForm = reactive({
 const rollbackForm = reactive({
   rollbackReason: '',
 })
-
 
 const formatSourceType = (sourceType?: string) => {
   if (!sourceType) return '-'
@@ -570,19 +628,64 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
+  gap: 20px;
   margin-bottom: 20px;
+  padding: 24px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #ffffff 0%, #f3f7ff 100%);
+  border: 1px solid #edf2ff;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.page-header-main {
+  flex: 1;
+}
+
+.page-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .page-header h1 {
   margin: 8px 0;
-  font-size: 28px;
+  font-size: 30px;
   color: #1f1f1f;
 }
 
 .page-header p {
   margin: 0;
   color: #666;
+  font-size: 14px;
+}
+
+.page-header-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+  max-width: 720px;
+}
+
+.summary-card {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid #eef2ff;
+}
+
+.summary-label {
+  display: block;
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-bottom: 6px;
+}
+
+.summary-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f1f1f;
 }
 
 .breadcrumb-link {
@@ -607,27 +710,48 @@ onMounted(async () => {
 }
 
 .version-panel {
-  border: 1px solid #f0f0f0;
-  border-radius: 12px;
-  padding: 16px;
-  background: #fafafa;
+  border: 1px solid #eef2f6;
+  border-radius: 18px;
+  padding: 18px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.version-panel-form {
+  background: linear-gradient(180deg, #ffffff 0%, #fafcff 100%);
+}
+
+.version-panel-list {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
 }
 
 .version-panel h3 {
   margin-top: 0;
+  margin-bottom: 6px;
+}
+
+.panel-title-row {
   margin-bottom: 16px;
+}
+
+.panel-title-tip,
+.version-list-subtitle {
+  color: #8c8c8c;
+  font-size: 13px;
 }
 
 .version-list-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 12px;
+  gap: 12px;
 }
 
 .version-count {
   color: #999;
   font-size: 13px;
+  white-space: nowrap;
 }
 
 .version-toolbar {
@@ -648,13 +772,25 @@ onMounted(async () => {
 }
 
 .version-list-item {
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
-  padding: 12px;
+  position: relative;
+  border: 1px solid #edf2f7;
+  border-radius: 14px;
+  padding: 14px 14px 14px 18px;
   background: #fff;
   cursor: pointer;
   margin-bottom: 12px;
   transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.version-list-item-accent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, #91caff 0%, #1677ff 100%);
+  opacity: 0.85;
 }
 
 .version-list-item:hover,
@@ -665,8 +801,12 @@ onMounted(async () => {
 
 .version-list-item.current {
   border-color: #52c41a;
-  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.10);
+  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.1);
   background: #fcfff7;
+}
+
+.version-list-item.current .version-list-item-accent {
+  background: linear-gradient(180deg, #95de64 0%, #52c41a 100%);
 }
 
 .version-list-item-top {
@@ -709,22 +849,77 @@ onMounted(async () => {
 
 .version-detail-card {
   margin-top: 8px;
+  border-radius: 20px;
+}
+
+.detail-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 20px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #ffffff 0%, #f6faff 100%);
+  border: 1px solid #edf2ff;
+  margin-bottom: 16px;
+}
+
+.detail-eyebrow {
+  color: #8c8c8c;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.detail-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.detail-title-row h3 {
+  margin: 0;
+  font-size: 22px;
+  color: #1f1f1f;
+}
+
+.detail-subtitle {
+  color: #666;
+  font-size: 13px;
 }
 
 .detail-tag-row {
   margin-bottom: 12px;
 }
 
-.meta-section {
+.detail-section-card {
   margin-top: 16px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid #eef2f6;
+  background: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
-.meta-section h4,
-.version-note-section h4,
-.rollback-section h4 {
-  margin-bottom: 12px;
+.section-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
+.section-title-row h4 {
+  margin: 0;
+}
+
+.section-title-row span {
+  color: #8c8c8c;
+  font-size: 13px;
+}
+
+.meta-section,
 .version-note-section,
 .rollback-section {
   margin-top: 20px;
@@ -738,13 +933,45 @@ onMounted(async () => {
   border-radius: 8px;
 }
 
+.operation-section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.operation-card {
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid #eef2f6;
+  background: #ffffff;
+}
+
+.operation-card-safe {
+  background: linear-gradient(180deg, #ffffff 0%, #f6ffed 100%);
+}
+
+.operation-card-warning {
+  background: linear-gradient(180deg, #ffffff 0%, #fffaf0 100%);
+}
+
 @media (max-width: 960px) {
   .page-header {
     flex-direction: column;
+    padding: 18px;
   }
 
-  .version-page-layout {
+  .page-header-summary {
     grid-template-columns: 1fr;
+  }
+
+  .version-page-layout,
+  .operation-section-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-hero,
+  .section-title-row {
+    flex-direction: column;
   }
 }
 </style>
