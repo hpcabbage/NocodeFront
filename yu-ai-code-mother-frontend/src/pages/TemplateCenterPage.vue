@@ -46,6 +46,15 @@ const pageDescription = computed(() => {
   }
   return '选择一个公开模板作为起点，再继续用 AI 修改你的网站。'
 })
+const pageStats = computed(() => {
+  const publicCount = templates.value.filter((item) => item.isPublic === 1).length
+  const myCount = templates.value.filter((item) => item.userId === loginUserStore.loginUser.id).length
+  return [
+    { label: '当前结果', value: templates.value.length },
+    { label: '公开模板', value: publicCount },
+    { label: '我的模板', value: myCount },
+  ]
+})
 
 const loadTemplates = async () => {
   loading.value = true
@@ -98,6 +107,11 @@ const resetFilters = () => {
   query.sortType = 'latest'
   query.pageNum = 1
   loadTemplates()
+}
+
+const viewTemplateDetail = (template: API.SiteTemplateVO) => {
+  if (!template.id) return
+  router.push(`/templates/${template.id}`)
 }
 
 const useTemplate = (template: API.SiteTemplateVO) => {
@@ -225,13 +239,26 @@ onMounted(async () => {
 <template>
   <div class="template-center-page">
     <div class="page-header">
-      <div>
+      <div class="page-header-main">
+        <div class="page-header-eyebrow">Template Hub</div>
         <h1>模板中心</h1>
         <p>{{ pageDescription }}</p>
+        <div class="page-stats">
+          <div v-for="item in pageStats" :key="item.label" class="stat-card">
+            <span class="stat-label">{{ item.label }}</span>
+            <span class="stat-value">{{ item.value }}</span>
+          </div>
+        </div>
       </div>
     </div>
 
     <a-card class="filter-card">
+      <div class="filter-card-header">
+        <div>
+          <h3>筛选与浏览</h3>
+          <p>按可见范围、分类和排序方式快速找到合适模板</p>
+        </div>
+      </div>
       <div class="view-switch-bar">
         <a-radio-group :value="activeView" button-style="solid">
           <a-radio-button value="public" @click="switchView('public')">公开模板</a-radio-button>
@@ -239,11 +266,11 @@ onMounted(async () => {
           <a-radio-button v-if="isAdmin" value="all" @click="switchView('all')">全部模板</a-radio-button>
         </a-radio-group>
       </div>
-      <a-space wrap>
+      <div class="filter-toolbar">
         <a-input
           v-model:value="query.searchText"
           placeholder="搜索模板名称"
-          style="width: 220px"
+          class="toolbar-search"
           allow-clear
           @pressEnter="loadTemplates"
         />
@@ -251,21 +278,23 @@ onMounted(async () => {
           v-model:value="query.category"
           placeholder="模板分类"
           allow-clear
-          style="width: 160px"
+          class="toolbar-select"
         >
           <a-select-option value="company">企业官网</a-select-option>
           <a-select-option value="portfolio">作品集</a-select-option>
           <a-select-option value="blog">博客</a-select-option>
           <a-select-option value="landing">落地页</a-select-option>
         </a-select>
-        <a-select v-model:value="query.sortType" style="width: 160px" @change="loadTemplates">
+        <a-select v-model:value="query.sortType" class="toolbar-select" @change="loadTemplates">
           <a-select-option value="latest">最新创建</a-select-option>
           <a-select-option value="mostUsed">使用次数最多</a-select-option>
           <a-select-option value="nameAsc">名称 A-Z</a-select-option>
         </a-select>
-        <a-button type="primary" @click="loadTemplates" :loading="loading">搜索</a-button>
-        <a-button @click="resetFilters">清空筛选</a-button>
-      </a-space>
+        <div class="toolbar-actions">
+          <a-button type="primary" @click="loadTemplates" :loading="loading">搜索</a-button>
+          <a-button @click="resetFilters">清空筛选</a-button>
+        </div>
+      </div>
     </a-card>
 
     <div v-if="templates.length === 0" class="empty-wrapper">
@@ -280,64 +309,77 @@ onMounted(async () => {
       />
     </div>
 
-    <div v-else class="template-grid">
-      <a-card v-for="template in templates" :key="template.id" class="template-card" hoverable>
-        <template #cover>
-          <div class="template-cover">
-            <img v-if="template.cover" :src="template.cover" alt="cover" />
-            <div v-else class="cover-placeholder">模板</div>
-          </div>
-        </template>
-        <a-card-meta :title="template.name" :description="template.description || '暂无描述'" />
-        <div class="template-meta">
-          <div class="template-tags">
-            <a-tag color="blue">{{ template.category || '未分类' }}</a-tag>
-            <a-tag v-if="template.isPublic === 1" color="green">公开</a-tag>
-            <a-tag v-else-if="template.userId === loginUserStore.loginUser.id" color="orange">私有</a-tag>
-            <a-tag v-else-if="isAdmin && activeView === 'all'" color="default">未公开</a-tag>
-            <a-tag v-if="template.userId === loginUserStore.loginUser.id" color="purple">我的</a-tag>
-            <a-tag v-if="activeView === 'public' && (template.useCount || 0) >= 1" color="gold">热门</a-tag>
-          </div>
-          <span>{{ template.user?.userName || '匿名用户' }} · 使用 {{ template.useCount || 0 }} 次</span>
+    <div v-else class="template-list-shell">
+      <div class="template-list-header">
+        <div>
+          <h3>模板列表</h3>
+          <p>挑选一个合适的起点，直接继续生成或进入详情查看</p>
         </div>
-        <div class="template-actions">
-          <a-button type="primary" block @click="useTemplate(template)">使用模板</a-button>
+        <span class="template-list-count">共 {{ templates.length }} 条</span>
+      </div>
 
-          <template v-if="isAdmin && activeView === 'all'">
-            <a-button style="margin-top: 8px" block @click="toggleTemplatePublic(template)">
-              {{ template.isPublic === 1 ? '取消公开' : '设为公开' }}
-            </a-button>
-            <div class="action-tip">管理员视图，可统一管理模板公开状态，未公开模板只在这里可见</div>
-          </template>
-
-          <template v-else-if="template.userId === loginUserStore.loginUser.id">
-            <a-button style="margin-top: 8px" block @click="openEditModal(template)">编辑模板</a-button>
-            <a-button
-              style="margin-top: 8px"
-              block
-              @click="toggleMyTemplatePublic(template)"
-              :loading="publishingTemplateId === template.id"
-            >
-              {{ template.isPublic === 1 ? '取消公开' : '公开模板' }}
-            </a-button>
-            <div class="action-tip">
-              {{ template.isPublic === 1 ? '当前已公开，其他用户可以在公开模板中使用它。' : '当前仅自己可见，公开后其他用户也能使用。' }}
+      <div class="template-grid template-grid-focused">
+        <a-card v-for="template in templates" :key="template.id" class="template-card template-card-emphasis" hoverable>
+          <template #cover>
+            <div class="template-cover">
+              <img v-if="template.cover" :src="template.cover" alt="cover" />
+              <div v-else class="cover-placeholder">模板</div>
             </div>
           </template>
+          <a-card-meta :title="template.name" :description="template.description || '暂无描述'" />
+          <a-button type="link" class="template-detail-link" @click="viewTemplateDetail(template)">
+            查看详情
+          </a-button>
+          <div class="template-meta">
+            <div class="template-tags">
+              <a-tag color="blue">{{ template.category || '未分类' }}</a-tag>
+              <a-tag v-if="template.isPublic === 1" color="green">公开</a-tag>
+              <a-tag v-else-if="template.userId === loginUserStore.loginUser.id" color="orange">私有</a-tag>
+              <a-tag v-else-if="isAdmin && activeView === 'all'" color="default">未公开</a-tag>
+              <a-tag v-if="template.userId === loginUserStore.loginUser.id" color="purple">我的</a-tag>
+              <a-tag v-if="activeView === 'public' && (template.useCount || 0) >= 1" color="gold">热门</a-tag>
+            </div>
+            <span>{{ template.user?.userName || '匿名用户' }} · 使用 {{ template.useCount || 0 }} 次</span>
+          </div>
+          <div class="template-actions">
+            <a-button type="primary" block @click="useTemplate(template)">使用模板</a-button>
 
-          <template v-else-if="activeView === 'public'">
-            <div class="action-tip">公开模板优先按使用次数和创建时间展示，你可以直接拿来继续生成应用</div>
-          </template>
+            <template v-if="isAdmin && activeView === 'all'">
+              <a-button style="margin-top: 8px" block @click="toggleTemplatePublic(template)">
+                {{ template.isPublic === 1 ? '取消公开' : '设为公开' }}
+              </a-button>
+              <div class="action-tip">管理员视图，可统一管理模板公开状态，未公开模板只在这里可见</div>
+            </template>
 
-          <a-popconfirm
-            v-if="canDeleteTemplate(template)"
-            title="确定删除这个模板吗？"
-            @confirm="removeTemplate(template)"
-          >
-            <a-button danger style="margin-top: 8px" block>删除模板</a-button>
-          </a-popconfirm>
-        </div>
-      </a-card>
+            <template v-else-if="template.userId === loginUserStore.loginUser.id">
+              <a-button style="margin-top: 8px" block @click="openEditModal(template)">编辑模板</a-button>
+              <a-button
+                style="margin-top: 8px"
+                block
+                @click="toggleMyTemplatePublic(template)"
+                :loading="publishingTemplateId === template.id"
+              >
+                {{ template.isPublic === 1 ? '取消公开' : '公开模板' }}
+              </a-button>
+              <div class="action-tip">
+                {{ template.isPublic === 1 ? '当前已公开，其他用户可以在公开模板中使用它。' : '当前仅自己可见，公开后其他用户也能使用。' }}
+              </div>
+            </template>
+
+            <template v-else-if="activeView === 'public'">
+              <div class="action-tip">公开模板优先按使用次数和创建时间展示，你可以直接拿来继续生成应用</div>
+            </template>
+
+            <a-popconfirm
+              v-if="canDeleteTemplate(template)"
+              title="确定删除这个模板吗？"
+              @confirm="removeTemplate(template)"
+            >
+              <a-button danger style="margin-top: 8px" block>删除模板</a-button>
+            </a-popconfirm>
+          </div>
+        </a-card>
+      </div>
     </div>
 
     <div class="pagination-wrapper">
@@ -378,44 +420,185 @@ onMounted(async () => {
 
 <style scoped>
 .template-center-page {
-  max-width: 1200px;
+  max-width: 1240px;
   margin: 0 auto;
   padding: 24px;
 }
 
 .page-header {
   margin-bottom: 20px;
+  padding: 28px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #ffffff 0%, #f5f9ff 100%);
+  border: 1px solid #edf2ff;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+}
+
+.page-header-eyebrow {
+  color: #1677ff;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
 }
 
 .page-header h1 {
-  margin-bottom: 8px;
+  margin: 0 0 10px;
+  font-size: 32px;
+  color: #1f1f1f;
+}
+
+.page-header p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.page-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+  max-width: 720px;
+}
+
+.stat-card {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #eef2ff;
+}
+
+.stat-label {
+  display: block;
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-bottom: 6px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f1f1f;
 }
 
 .filter-card {
   margin-bottom: 20px;
+  border-radius: 20px;
+  border: 1px solid #eef2f6;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.filter-card-header {
+  margin-bottom: 16px;
+}
+
+.filter-card-header h3 {
+  margin: 0 0 6px;
+}
+
+.filter-card-header p {
+  margin: 0;
+  color: #8c8c8c;
+  font-size: 13px;
 }
 
 .view-switch-bar {
   margin-bottom: 16px;
 }
 
+.filter-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.toolbar-search {
+  width: 240px;
+}
+
+.toolbar-select {
+  width: 170px;
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 10px;
+}
+
 .empty-wrapper {
   padding: 48px 0;
+  border-radius: 20px;
+  background: #fff;
+  border: 1px solid #eef2f6;
+}
+
+.template-list-shell {
+  padding: 22px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+  border: 1px solid #eef2f6;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+  min-height: 420px;
+}
+
+.template-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.template-list-header h3 {
+  margin: 0 0 6px;
+}
+
+.template-list-header p {
+  margin: 0;
+  color: #8c8c8c;
+  font-size: 13px;
+}
+
+.template-list-count {
+  color: #8c8c8c;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 .template-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 360px));
+  gap: 24px;
+  align-items: stretch;
+}
+
+.template-grid-focused {
+  justify-content: flex-start;
 }
 
 .template-card {
   overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid #edf2f7;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.template-card-emphasis {
+  min-height: 100%;
+}
+
+.template-card-emphasis :deep(.ant-card-body) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .template-cover {
-  height: 180px;
-  background: #f5f5f5;
+  height: 220px;
+  background: linear-gradient(180deg, #f3f6fb 0%, #eef4ff 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -430,6 +613,11 @@ onMounted(async () => {
 .cover-placeholder {
   color: #999;
   font-size: 18px;
+}
+
+.template-detail-link {
+  padding-left: 0;
+  margin-top: 8px;
 }
 
 .template-meta {
@@ -450,7 +638,8 @@ onMounted(async () => {
 }
 
 .template-actions {
-  margin-top: 16px;
+  margin-top: auto;
+  padding-top: 16px;
 }
 
 .action-tip {
@@ -464,5 +653,24 @@ onMounted(async () => {
   margin-top: 24px;
   display: flex;
   justify-content: center;
+}
+
+@media (max-width: 960px) {
+  .page-header {
+    padding: 20px;
+  }
+
+  .page-stats,
+  .template-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .template-grid-focused {
+    justify-content: stretch;
+  }
+
+  .template-list-header {
+    flex-direction: column;
+  }
 }
 </style>
