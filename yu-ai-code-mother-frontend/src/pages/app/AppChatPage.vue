@@ -135,6 +135,15 @@
             />
             <div class="input-actions">
               <a-button
+                  v-if="isGenerating"
+                  danger
+                  @click="stopGeneration"
+                  :disabled="!isOwner || !currentGeneration"
+              >
+                终止生成
+              </a-button>
+              <a-button
+                  v-else
                   type="primary"
                   @click="sendMessage"
                   :loading="isGenerating"
@@ -233,6 +242,7 @@
         </a-form-item>
       </a-form>
     </a-modal>
+
   </div>
 </template>
 
@@ -281,11 +291,22 @@ interface Message {
   content: string
   loading?: boolean
   createTime?: string
+  generationId?: string
+  stopped?: boolean
+}
+
+interface GenerationState {
+  generationId: string
+  status: 'idle' | 'generating' | 'stopped' | 'failed' | 'success'
+  phase: 'understanding' | 'generating' | 'refreshing_preview' | 'completed'
+  aiMessageIndex: number
 }
 
 const messages = ref<Message[]>([])
 const userInput = ref('')
 const isGenerating = ref(false)
+const currentGeneration = ref<GenerationState | null>(null)
+const currentEventSource = ref<EventSource | null>(null)
 const messagesContainer = ref<HTMLElement>()
 
 // 对话历史相关
@@ -549,55 +570,91 @@ const sendMessage = async () => {
 
 // 生成代码 - 使用 EventSource 处理流式响应
 const generateCode = async (userMessage: string, aiMessageIndex: number) => {
-  let eventSource: EventSource | null = null
   let streamCompleted = false
 
   try {
-    // 获取 axios 配置的 baseURL
     const baseURL = request.defaults.baseURL || API_BASE_URL
-
-    // 构建URL参数
     const params = new URLSearchParams({
       appId: appId.value || '',
       message: userMessage,
     })
 
     const url = `${baseURL}/app/chat/gen/code?${params}`
-
-    // 创建 EventSource 连接
-    eventSource = new EventSource(url, {
+    currentEventSource.value = new EventSource(url, {
       withCredentials: true,
     })
 
     let fullContent = ''
 
-    // 处理接收到的消息
-    eventSource.onmessage = function (event) {
+    const handleGenerationMessage = (event: MessageEvent) => {
       if (streamCompleted) return
 
       try {
-        // 外层是 SSE 包装，内层是 ai_response JSON 字符串
         const parsed = JSON.parse(event.data)
-        const rawContent = parsed.d
-
-        let content = rawContent
-        if (typeof rawContent === 'string') {
-          try {
-            const innerMessage = JSON.parse(rawContent)
-            if (innerMessage?.type === 'ai_response') {
-              content = innerMessage.data ?? ''
-            }
-          } catch {
-            content = rawContent
+        if (parsed.type === 'GENERATION_STARTED') {
+          currentGeneration.value = {
+            generationId: parsed.generationId,
+            status: 'generating',
+            phase: 'understanding',
+            aiMessageIndex,
           }
+          messages.value[aiMessageIndex].generationId = parsed.generationId
+          return
         }
-
-        // 拼接内容
-        if (content !== undefined && content !== null) {
-          fullContent += content
-          messages.value[aiMessageIndex].content = fullContent
+        if (currentGeneration.value && parsed.generationId && parsed.generationId !== currentGeneration.value.generationId) {
+          return
+        }
+        if (parsed.type === 'CONTENT_CHUNK') {
+          const rawContent = parsed.d
+          let content = rawContent
+          if (typeof rawContent === 'string') {
+            try {
+              const innerMessage = JSON.parse(rawContent)
+              if (innerMessage?.type === 'ai_response') {
+                content = innerMessage.data ?? ''
+              }
+            } catch {
+              content = rawContent
+            }
+          }
+          if (content !== undefined && content !== null) {
+            fullContent += content
+            messages.value[aiMessageIndex].content = fullContent
+            messages.value[aiMessageIndex].loading = false
+            if (currentGeneration.value) {
+              currentGeneration.value.phase = 'generating'
+            }
+            scrollToBottom()
+          }
+          return
+        }
+        if (parsed.type === 'GENERATION_COMPLETED') {
+          streamCompleted = true
+          isGenerating.value = false
+          if (currentGeneration.value) {
+            currentGeneration.value.status = 'success'
+            currentGeneration.value.phase = 'refreshing_preview'
+          }
+          currentEventSource.value?.close()
+          setTimeout(async () => {
+            await fetchAppInfo()
+            updatePreview()
+            if (currentGeneration.value) {
+              currentGeneration.value.phase = 'completed'
+            }
+          }, 1000)
+          return
+        }
+        if (parsed.type === 'GENERATION_STOPPED') {
+          streamCompleted = true
+          isGenerating.value = false
           messages.value[aiMessageIndex].loading = false
-          scrollToBottom()
+          messages.value[aiMessageIndex].stopped = true
+          messages.value[aiMessageIndex].content = fullContent || '已终止本轮生成'
+          if (currentGeneration.value) {
+            currentGeneration.value.status = 'stopped'
+          }
+          currentEventSource.value?.close()
         }
       } catch (error) {
         console.error('解析消息失败:', error)
@@ -605,60 +662,48 @@ const generateCode = async (userMessage: string, aiMessageIndex: number) => {
       }
     }
 
-    // 处理done事件
-    eventSource.addEventListener('done', function () {
+    currentEventSource.value.onmessage = handleGenerationMessage
+    currentEventSource.value.addEventListener('generation-started', handleGenerationMessage)
+    currentEventSource.value.addEventListener('generation-completed', handleGenerationMessage)
+    currentEventSource.value.addEventListener('generation-stopped', handleGenerationMessage)
+
+    currentEventSource.value.addEventListener('done', function () {
       if (streamCompleted) return
-
       streamCompleted = true
-      isGenerating.value = false
-      eventSource?.close()
-
-      // 延迟更新预览，确保后端已完成处理
-      setTimeout(async () => {
-        await fetchAppInfo()
-        updatePreview()
-      }, 1000)
+      currentEventSource.value?.close()
     })
 
-    // 处理business-error事件（后端限流等错误）
-    eventSource.addEventListener('business-error', function (event: MessageEvent) {
+    currentEventSource.value.addEventListener('business-error', function (event: MessageEvent) {
       if (streamCompleted) return
 
       try {
         const errorData = JSON.parse(event.data)
         console.error('SSE业务错误事件:', errorData)
-
-        // 显示具体的错误信息
         const errorMessage = errorData.message || '生成过程中出现错误'
         messages.value[aiMessageIndex].content = `❌ ${errorMessage}`
         messages.value[aiMessageIndex].loading = false
+        if (currentGeneration.value) {
+          currentGeneration.value.status = 'failed'
+        }
         message.error(errorMessage)
 
         streamCompleted = true
         isGenerating.value = false
-        eventSource?.close()
+        currentEventSource.value?.close()
       } catch (parseError) {
         console.error('解析错误事件失败:', parseError, '原始数据:', event.data)
         handleError(new Error('服务器返回错误'), aiMessageIndex)
       }
     })
 
-    // 处理错误
-    eventSource.onerror = function () {
+    currentEventSource.value.onerror = function () {
       if (streamCompleted || !isGenerating.value) return
-      // 检查是否是正常的连接关闭
-      if (eventSource?.readyState === EventSource.CONNECTING) {
+      if (currentGeneration.value?.status === 'stopped') {
         streamCompleted = true
-        isGenerating.value = false
-        eventSource?.close()
-
-        setTimeout(async () => {
-          await fetchAppInfo()
-          updatePreview()
-        }, 1000)
-      } else {
-        handleError(new Error('SSE连接错误'), aiMessageIndex)
+        currentEventSource.value?.close()
+        return
       }
+      handleError(new Error('SSE连接错误'), aiMessageIndex)
     }
   } catch (error) {
     console.error('创建 EventSource 失败：', error)
@@ -671,8 +716,33 @@ const handleError = (error: unknown, aiMessageIndex: number) => {
   console.error('生成代码失败：', error)
   messages.value[aiMessageIndex].content = '抱歉，生成过程中出现了错误，请重试。'
   messages.value[aiMessageIndex].loading = false
+  if (currentGeneration.value) {
+    currentGeneration.value.status = 'failed'
+  }
   message.error('生成失败，请重试')
   isGenerating.value = false
+}
+
+const stopGeneration = async () => {
+  if (!appId.value || !currentGeneration.value?.generationId) {
+    return
+  }
+  try {
+    const res = await request.post('/app/chat/gen/code/stop', {
+      appId: appId.value,
+      generationId: currentGeneration.value.generationId,
+    })
+    if (res?.data?.code === 0 || res?.data === true) {
+      currentGeneration.value.status = 'stopped'
+      currentEventSource.value?.close()
+      isGenerating.value = false
+    } else {
+      message.error('终止生成失败')
+    }
+  } catch (error) {
+    console.error('终止生成失败：', error)
+    message.error('终止生成失败')
+  }
 }
 
 // 更新预览
@@ -1078,6 +1148,7 @@ onUnmounted(() => {
     flex: none;
     height: 50vh;
   }
+
 }
 
 @media (max-width: 768px) {
