@@ -17,6 +17,12 @@ const creating = ref(false)
 const selectedTemplateId = ref<number | undefined>()
 const selectedTemplateName = ref('')
 
+const templateEntryTips = [
+  '先挑一个贴近业务的模板，再补一句你的差异化要求',
+  '模板会作为起点保留，你输入的内容只负责补充和修改',
+  '如果暂时没想法，也可以直接从空白需求开始创建',
+]
+
 // 我的应用数据
 const myApps = ref<API.AppVO[]>([])
 const myAppsPage = reactive({
@@ -196,10 +202,31 @@ onMounted(() => {
         <p class="hero-description">用AI，重新定义建站：只需一句话</p>
       </div>
 
+      <div class="template-entry-card">
+        <div class="template-entry-main">
+          <div>
+            <div class="template-entry-eyebrow">Template Flow</div>
+            <h2>先选模板，或者直接从一句话开始</h2>
+            <p>
+              首页已经接通模板链路。你可以先去模板中心找一个接近的起点，也可以直接输入需求，从空白开始生成。
+            </p>
+          </div>
+          <div class="template-entry-actions">
+            <a-button type="default" size="large" @click="router.push('/templates')">去模板中心挑模板</a-button>
+            <a-button v-if="selectedTemplateId" type="link" @click="clearSelectedTemplate">取消当前模板</a-button>
+          </div>
+        </div>
+        <div class="template-entry-tips">
+          <div v-for="tip in templateEntryTips" :key="tip" class="template-entry-tip">
+            {{ tip }}
+          </div>
+        </div>
+      </div>
+
       <!-- 用户提示词输入框 -->
       <div v-if="selectedTemplateId" class="selected-template-bar">
         <a-tag color="blue">当前模板：{{ selectedTemplateName || `模板 #${selectedTemplateId}` }}</a-tag>
-        <a-button type="link" @click="clearSelectedTemplate">取消模板</a-button>
+        <span class="selected-template-text">已带入模板起点，现在只需要补充你想新增或修改的要求。</span>
       </div>
       <div class="input-section">
         <a-textarea
@@ -215,6 +242,7 @@ onMounted(() => {
             <template #icon>
               <span>↑</span>
             </template>
+            {{ selectedTemplateId ? '基于模板创建' : '立即创建' }}
           </a-button>
         </div>
       </div>
@@ -478,6 +506,71 @@ onMounted(() => {
   z-index: 2;
 }
 
+/* 模板入口 */
+.template-entry-card {
+  max-width: 980px;
+  margin: 0 auto 20px;
+  padding: 22px 24px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+}
+
+.template-entry-main {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.template-entry-eyebrow {
+  color: #3b82f6;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+
+.template-entry-card h2 {
+  margin: 0 0 10px;
+  font-size: 28px;
+  color: #0f172a;
+}
+
+.template-entry-card p {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.7;
+  max-width: 720px;
+}
+
+.template-entry-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.template-entry-tips {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.template-entry-tip {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(248, 250, 252, 0.92);
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 /* 输入区域 */
 .selected-template-bar {
   max-width: 800px;
@@ -485,6 +578,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+  padding: 0 4px;
+}
+
+.selected-template-text {
+  color: #64748b;
+  font-size: 13px;
 }
 
 .input-section {
@@ -606,6 +706,23 @@ onMounted(() => {
 
   .hero-description {
     font-size: 16px;
+  }
+
+  .template-entry-main {
+    flex-direction: column;
+  }
+
+  .template-entry-actions {
+    align-items: flex-start;
+  }
+
+  .template-entry-tips {
+    grid-template-columns: 1fr;
+  }
+
+  .selected-template-bar {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .app-grid,

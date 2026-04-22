@@ -62,6 +62,46 @@ const summaryText = computed(() => {
   return `这是一个适合${template.value?.category || '通用'}场景的模板，你可以直接基于它继续补充个性化要求。`
 })
 
+const detailHighlights = computed(() => {
+  const items = [
+    {
+      label: '适合场景',
+      value: template.value?.category || '通用场景',
+      tone: 'blue',
+    },
+    {
+      label: '推荐动作',
+      value: '先直接使用模板，再补充你的产品目标、风格和细节要求',
+      tone: 'purple',
+    },
+  ]
+
+  if (template.value?.description) {
+    items.push({
+      label: '内容摘要',
+      value: template.value.description,
+      tone: 'green',
+    })
+  }
+
+  return items
+})
+
+const promptStats = computed(() => {
+  const prompt = template.value?.initPrompt || ''
+  const lineCount = prompt ? prompt.split('\n').filter((line) => line.trim().length > 0).length : 0
+  return [
+    {
+      label: '提示词长度',
+      value: prompt ? `${prompt.length} 字符` : '暂无内容',
+    },
+    {
+      label: '有效段落',
+      value: prompt ? `${lineCount || 1} 段` : '-',
+    },
+  ]
+})
+
 onMounted(() => {
   loadTemplate()
 })
@@ -142,14 +182,19 @@ onMounted(() => {
               </div>
             </div>
 
-            <div class="highlight-row">
-              <div class="highlight-card emphasis-card">
-                <div class="highlight-label">适合场景</div>
-                <div class="highlight-value">{{ template.category || '通用场景' }}</div>
-              </div>
-              <div class="highlight-card">
-                <div class="highlight-label">推荐动作</div>
-                <div class="highlight-value">先直接使用模板，再补充你的产品目标、风格和细节要求</div>
+            <div class="highlight-row" :class="{ 'highlight-row-triple': detailHighlights.length >= 3 }">
+              <div
+                v-for="item in detailHighlights"
+                :key="item.label"
+                class="highlight-card"
+                :class="[
+                  item.tone === 'blue' ? 'emphasis-card' : '',
+                  item.tone === 'purple' ? 'accent-card-purple' : '',
+                  item.tone === 'green' ? 'accent-card-green' : '',
+                ]"
+              >
+                <div class="highlight-label">{{ item.label }}</div>
+                <div class="highlight-value">{{ item.value }}</div>
               </div>
             </div>
 
@@ -161,6 +206,12 @@ onMounted(() => {
 
           <a-card class="prompt-card" title="模板提示词" :bordered="false">
             <div class="prompt-tip">这里展示的是模板的原始初始化提示词。建议先直接使用模板，再在对话里继续补充你的业务目标、风格和边界要求。</div>
+            <div class="prompt-stats">
+              <div v-for="item in promptStats" :key="item.label" class="prompt-stat-item">
+                <span class="prompt-stat-label">{{ item.label }}</span>
+                <span class="prompt-stat-value">{{ item.value }}</span>
+              </div>
+            </div>
             <div class="prompt-block">
               <div class="prompt-toolbar">
                 <span class="prompt-chip">Init Prompt</span>
@@ -322,13 +373,6 @@ onMounted(() => {
   justify-content: flex-end;
 }
 
-.description {
-  color: #475569;
-  line-height: 1.8;
-  margin: 20px 0;
-  font-size: 15px;
-}
-
 .subtitle {
   margin: 12px 0 0;
   color: #475569;
@@ -400,6 +444,10 @@ onMounted(() => {
   gap: 12px;
 }
 
+.highlight-row-triple {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .highlight-card {
   padding: 16px;
   border-radius: 16px;
@@ -409,6 +457,14 @@ onMounted(() => {
 
 .emphasis-card {
   background: linear-gradient(135deg, #eff6ff 0%, #f8fbff 55%, #eef2ff 100%);
+}
+
+.accent-card-purple {
+  background: linear-gradient(135deg, #faf5ff 0%, #f8f5ff 55%, #f3e8ff 100%);
+}
+
+.accent-card-green {
+  background: linear-gradient(135deg, #f0fdf4 0%, #f7fff8 55%, #dcfce7 100%);
 }
 
 .highlight-label {
@@ -427,6 +483,33 @@ onMounted(() => {
   color: #64748b;
   line-height: 1.7;
   margin-bottom: 14px;
+}
+
+.prompt-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.prompt-stat-item {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+}
+
+.prompt-stat-label {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.prompt-stat-value {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .prompt-block {
@@ -505,6 +588,14 @@ onMounted(() => {
   }
 
   .highlight-row {
+    grid-template-columns: 1fr;
+  }
+
+  .highlight-row-triple {
+    grid-template-columns: 1fr;
+  }
+
+  .prompt-stats {
     grid-template-columns: 1fr;
   }
 
