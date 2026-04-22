@@ -66,7 +66,7 @@
                 <MarkdownRenderer v-if="message.content" :content="message.content" />
                 <div v-if="message.loading" class="loading-indicator">
                   <a-spin size="small" />
-                  <span>AI 正在思考...</span>
+                  <span>{{ getGenerationPhaseText() }}</span>
                 </div>
               </div>
             </div>
@@ -190,7 +190,7 @@
           </div>
           <div v-else-if="isGenerating" class="preview-loading">
             <a-spin size="large" />
-            <p>正在生成网站...</p>
+            <p>{{ getPreviewPhaseText() }}</p>
           </div>
           <iframe
               v-else
@@ -293,6 +293,7 @@ interface Message {
   createTime?: string
   generationId?: string
   stopped?: boolean
+  stopReason?: 'user' | 'system'
 }
 
 interface GenerationState {
@@ -344,6 +345,31 @@ const isOwner = computed(() => {
 const isAdmin = computed(() => {
   return loginUserStore.loginUser.userRole === 'admin'
 })
+
+const getGenerationPhaseText = () => {
+  const phase = currentGeneration.value?.phase
+  if (phase === 'understanding') {
+    return 'AI 正在理解你的需求...'
+  }
+  if (phase === 'generating') {
+    return 'AI 正在生成内容...'
+  }
+  if (phase === 'refreshing_preview') {
+    return 'AI 正在刷新预览...'
+  }
+  return 'AI 正在思考...'
+}
+
+const getPreviewPhaseText = () => {
+  const phase = currentGeneration.value?.phase
+  if (phase === 'refreshing_preview') {
+    return '正在刷新网站预览...'
+  }
+  if (phase === 'generating') {
+    return '正在生成网站内容...'
+  }
+  return '正在生成网站...'
+}
 
 // 应用详情相关
 const appDetailVisible = ref(false)
@@ -650,11 +676,17 @@ const generateCode = async (userMessage: string, aiMessageIndex: number) => {
           isGenerating.value = false
           messages.value[aiMessageIndex].loading = false
           messages.value[aiMessageIndex].stopped = true
-          messages.value[aiMessageIndex].content = fullContent || '已终止本轮生成'
+          messages.value[aiMessageIndex].stopReason = messages.value[aiMessageIndex].stopReason || 'system'
+          messages.value[aiMessageIndex].content = fullContent
+            ? `${fullContent}\n\n⚪ 本轮生成已停止，以上是停止前已生成的内容。`
+            : '⚪ 本轮生成已停止，你可以继续补充要求后再发起下一轮生成。'
           if (currentGeneration.value) {
             currentGeneration.value.status = 'stopped'
           }
           currentEventSource.value?.close()
+          if (messages.value[aiMessageIndex].stopReason === 'user') {
+            message.success('已停止当前生成')
+          }
         }
       } catch (error) {
         console.error('解析消息失败:', error)
@@ -679,6 +711,9 @@ const generateCode = async (userMessage: string, aiMessageIndex: number) => {
       try {
         const errorData = JSON.parse(event.data)
         console.error('SSE业务错误事件:', errorData)
+        if (errorData.generationId && currentGeneration.value?.generationId && errorData.generationId !== currentGeneration.value.generationId) {
+          return
+        }
         const errorMessage = errorData.message || '生成过程中出现错误'
         messages.value[aiMessageIndex].content = `❌ ${errorMessage}`
         messages.value[aiMessageIndex].loading = false
@@ -728,19 +763,27 @@ const stopGeneration = async () => {
     return
   }
   try {
+    const aiMessageIndex = currentGeneration.value.aiMessageIndex
+    if (messages.value[aiMessageIndex]) {
+      messages.value[aiMessageIndex].stopReason = 'user'
+    }
     const res = await request.post('/app/chat/gen/code/stop', {
       appId: appId.value,
       generationId: currentGeneration.value.generationId,
     })
     if (res?.data?.code === 0 || res?.data === true) {
       currentGeneration.value.status = 'stopped'
-      currentEventSource.value?.close()
-      isGenerating.value = false
     } else {
+      if (messages.value[aiMessageIndex]) {
+        messages.value[aiMessageIndex].stopReason = undefined
+      }
       message.error('终止生成失败')
     }
   } catch (error) {
     console.error('终止生成失败：', error)
+    if (currentGeneration.value?.aiMessageIndex !== undefined && messages.value[currentGeneration.value.aiMessageIndex]) {
+      messages.value[currentGeneration.value.aiMessageIndex].stopReason = undefined
+    }
     message.error('终止生成失败')
   }
 }
