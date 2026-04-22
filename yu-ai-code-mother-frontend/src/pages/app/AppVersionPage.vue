@@ -127,6 +127,39 @@
           </div>
         </div>
 
+        <div class="decision-summary-card">
+          <div class="section-title-row">
+            <h4>恢复前快速判断</h4>
+            <span>先确认这是不是你真正想恢复的版本</span>
+          </div>
+          <div class="decision-summary-grid">
+            <div class="decision-summary-item">
+              <span class="decision-summary-label">当前查看版本</span>
+              <span class="decision-summary-value">{{ selectedVersion.versionTitle || `V${selectedVersion.versionNo}` }}</span>
+            </div>
+            <div class="decision-summary-item">
+              <span class="decision-summary-label">版本关系</span>
+              <span class="decision-summary-value">{{ getVersionDecisionRelation(selectedVersion) }}</span>
+            </div>
+            <div class="decision-summary-item decision-summary-item-wide">
+              <span class="decision-summary-label">恢复提醒</span>
+              <span class="decision-summary-value">恢复后系统会基于这个版本生成一条新的回滚版本，并把它切换为当前版本。</span>
+            </div>
+            <div class="decision-summary-item decision-summary-item-wide">
+              <span class="decision-summary-label">版本备注</span>
+              <span class="decision-summary-value">{{ selectedVersion.changeSummary || '当前版本没有填写备注，恢复前请重点核对版本标题、标签与来源关系。' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <a-alert
+          v-if="selectedVersion.currentVersion && selectedVersion.sourceType === 'ROLLBACK' && selectedVersion.sourceVersionId"
+          type="success"
+          show-icon
+          class="rollback-result-alert"
+          :message="`当前已经切换到 ${getVersionLabel(selectedVersion)}，它是一次恢复生成的新版本，恢复自 ${getVersionLabelById(selectedVersion.sourceVersionId)}。`"
+        />
+
         <div class="detail-section-card">
           <div class="section-title-row">
             <h4>版本信息</h4>
@@ -216,9 +249,10 @@
             <a-alert
               type="warning"
               show-icon
-              message="回滚会覆盖当前应用输出内容，并生成一条新的回滚版本记录。"
+              message="恢复后会覆盖当前应用输出，并基于这个版本生成一条新的回滚版本记录。"
               style="margin-bottom: 12px"
             />
+            <div class="rollback-action-tip">这不会直接改写旧版本本身，而是把恢复结果作为新的当前版本保留下来。</div>
             <a-form layout="vertical">
               <a-form-item label="回滚说明（可选)">
                 <a-textarea
@@ -361,6 +395,34 @@ const getVersionLabelById = (versionId?: number) => {
     return `V${matched.versionNo}`
   }
   return `#${versionId}`
+}
+
+const getVersionLabel = (version?: API.AppFrontendVersionVO) => {
+  if (!version) return '-'
+  return version.versionNo ? `V${version.versionNo}` : `#${version.id}`
+}
+
+const getVersionDecisionRelation = (version?: API.AppFrontendVersionVO) => {
+  if (!version) return '-'
+  if (version.currentVersion && version.sourceType === 'ROLLBACK' && version.sourceVersionId) {
+    return `当前版本，由恢复 ${getVersionLabelById(version.sourceVersionId)} 生成`
+  }
+  if (version.currentVersion) {
+    return '当前正在使用的版本'
+  }
+  if (version.isStable && version.sourceVersionId) {
+    return `稳定版本，来源于 ${getVersionLabelById(version.sourceVersionId)}`
+  }
+  if (version.isStable) {
+    return '稳定版本，可作为优先恢复目标'
+  }
+  if (version.sourceType === 'ROLLBACK' && version.sourceVersionId) {
+    return `回滚生成版本，恢复自 ${getVersionLabelById(version.sourceVersionId)}`
+  }
+  if (version.sourceVersionId) {
+    return `来源于 ${getVersionLabelById(version.sourceVersionId)}`
+  }
+  return '独立提交版本'
 }
 
 const filteredVersionList = computed(() => {
@@ -902,6 +964,49 @@ onMounted(async () => {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
+.decision-summary-card {
+  margin-top: 16px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid #e6f4ff;
+  background: linear-gradient(180deg, #f8fcff 0%, #ffffff 100%);
+}
+
+.decision-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.decision-summary-item {
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid #edf2f7;
+}
+
+.decision-summary-item-wide {
+  grid-column: span 2;
+}
+
+.decision-summary-label {
+  display: block;
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-bottom: 8px;
+}
+
+.decision-summary-value {
+  color: #1f1f1f;
+  font-size: 14px;
+  line-height: 1.7;
+  font-weight: 600;
+}
+
+.rollback-result-alert {
+  margin-top: 16px;
+}
+
 .section-title-row {
   display: flex;
   justify-content: space-between;
@@ -954,6 +1059,13 @@ onMounted(async () => {
   background: linear-gradient(180deg, #ffffff 0%, #fffaf0 100%);
 }
 
+.rollback-action-tip {
+  margin-bottom: 12px;
+  color: #8c8c8c;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 @media (max-width: 960px) {
   .page-header {
     flex-direction: column;
@@ -965,8 +1077,13 @@ onMounted(async () => {
   }
 
   .version-page-layout,
-  .operation-section-grid {
+  .operation-section-grid,
+  .decision-summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .decision-summary-item-wide {
+    grid-column: span 1;
   }
 
   .detail-hero,
