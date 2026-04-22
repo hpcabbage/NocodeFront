@@ -7,6 +7,7 @@ import UserManagePage from '@/pages/admin/UserManagePage.vue'
 import AppManagePage from '@/pages/admin/AppManagePage.vue'
 import AppChatPage from '@/pages/app/AppChatPage.vue'
 import AppEditPage from '@/pages/app/AppEditPage.vue'
+import AppVersionPage from '@/pages/app/AppVersionPage.vue'
 import TemplateCenterPage from '@/pages/TemplateCenterPage.vue'
 import TemplateDetailPage from '@/pages/TemplateDetailPage.vue'
 import ChatManagePage from "@/pages/admin/ChatManagePage.vue";
@@ -68,6 +69,11 @@ const router = createRouter({
       path: '/app/edit/:id',
       name: '编辑应用',
       component: AppEditPage,
+    },
+    {
+      path: '/app/version/:id',
+      name: '应用版本管理',
+      component: AppVersionPage,
     },
   ],
 })
