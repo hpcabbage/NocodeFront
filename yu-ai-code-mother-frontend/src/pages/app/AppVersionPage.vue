@@ -84,7 +84,7 @@
           <div class="version-list-header">
             <div>
               <h3>版本列表</h3>
-              <div class="version-list-subtitle">按时间倒序查看快照、稳定版本与回滚记录</div>
+              <div class="version-list-subtitle">按时间倒序查看当前有效版本、稳定版本与历史快照</div>
             </div>
             <span class="version-count">共 {{ filteredVersionList.length }} 条</span>
           </div>
@@ -155,7 +155,7 @@
             </div>
             <div class="decision-summary-item decision-summary-item-wide">
               <span class="decision-summary-label">恢复提醒</span>
-              <span class="decision-summary-value">恢复后系统会基于这个版本生成一条新的回滚版本，并把它切换为当前使用版本。</span>
+              <span class="decision-summary-value">恢复后当前版本会直接切换为这一版，并永久删除它之后的所有版本。</span>
             </div>
             <div class="decision-summary-item decision-summary-item-wide">
               <span class="decision-summary-label">版本备注</span>
@@ -165,11 +165,11 @@
         </div>
 
         <a-alert
-          v-if="displayVersion.currentVersion && displayVersion.sourceType === 'ROLLBACK' && displayVersion.sourceVersionId"
+          v-if="displayVersion.currentVersion"
           type="success"
           show-icon
           class="rollback-result-alert"
-          :message="`当前已经切换到 ${getVersionLabel(displayVersion)}，它是一次恢复生成的新版本，恢复自 ${getVersionLabelById(displayVersion.sourceVersionId)}。`"
+          :message="`当前正在使用 ${getVersionLabel(displayVersion)}。如果这是一次刚执行完成的回滚，那么它之后的版本已被删除。`"
         />
 
         <div class="detail-section-card">
@@ -188,9 +188,6 @@
           <a-descriptions-item label="稳定版本">{{ displayVersion.isStable ? '是' : '否' }}</a-descriptions-item>
           <a-descriptions-item label="来源版本" :span="2">
             {{ displayVersion.sourceVersionId ? getVersionLabelById(displayVersion.sourceVersionId) : '无' }}
-          </a-descriptions-item>
-          <a-descriptions-item v-if="displayVersion.sourceVersionId && displayVersion.sourceType === 'ROLLBACK'" label="恢复关系" :span="2">
-            当前查看版本由回滚生成，恢复自 {{ getVersionLabelById(displayVersion.sourceVersionId) }}
           </a-descriptions-item>
           <a-descriptions-item label="版本目录" :span="2">{{ displayVersion.versionPath || '-' }}</a-descriptions-item>
           <a-descriptions-item label="Meta 文件" :span="2">{{ displayVersion.metaPath || '-' }}</a-descriptions-item>
@@ -265,15 +262,15 @@
           <div class="operation-card operation-card-warning">
             <div class="section-title-row">
               <h4>回滚到当前版本</h4>
-              <span>会覆盖当前应用输出，并生成新的回滚版本记录</span>
+              <span>会覆盖当前应用输出，并删除这个版本之后的所有版本</span>
             </div>
             <a-alert
               type="warning"
               show-icon
-              message="恢复后会覆盖当前应用输出，并基于这个版本生成一条新的回滚版本记录。"
+              message="回滚后会覆盖当前应用输出，并永久删除这个版本之后的所有版本。"
               style="margin-bottom: 12px"
             />
-            <div class="rollback-action-tip">这不会直接改写旧版本本身，而是把恢复结果作为新的当前版本保留下来。</div>
+            <div class="rollback-action-tip">这是高风险操作。删除后续版本后，版本号会从当前目标版本继续重新开始。</div>
             <a-form layout="vertical">
               <a-form-item label="回滚说明（可选)">
                 <a-textarea
@@ -386,7 +383,7 @@ const rollbackForm = reactive({
 
 const formatSourceType = (sourceType?: string) => {
   if (!sourceType) return '-'
-  if (sourceType === 'ROLLBACK') return '回滚生成'
+  if (sourceType === 'ROLLBACK') return '回滚版本'
   if (sourceType === 'MANUAL_COMMIT') return '手动提交'
   return sourceType
 }
@@ -401,7 +398,7 @@ const getVersionTags = (version?: API.AppFrontendVersionVO) => {
     tags.push({ text: '稳定版本', color: 'gold' })
   }
   if (version.sourceType === 'ROLLBACK') {
-    tags.push({ text: '回滚生成', color: 'purple' })
+    tags.push({ text: '回滚目标', color: 'purple' })
   }
   if (version.sourceType === 'MANUAL_COMMIT') {
     tags.push({ text: '手动提交', color: 'blue' })
@@ -425,8 +422,8 @@ const getVersionLabel = (version?: API.AppFrontendVersionVO) => {
 
 const getVersionDecisionRelation = (version?: API.AppFrontendVersionVO) => {
   if (!version) return '-'
-  if (version.currentVersion && version.sourceType === 'ROLLBACK' && version.sourceVersionId) {
-    return `当前版本，由恢复 ${getVersionLabelById(version.sourceVersionId)} 生成`
+  if (version.currentVersion && version.sourceType === 'ROLLBACK') {
+    return '当前正在使用的回滚目标版本'
   }
   if (version.currentVersion) {
     return '当前正在使用的版本'
@@ -437,8 +434,8 @@ const getVersionDecisionRelation = (version?: API.AppFrontendVersionVO) => {
   if (version.isStable) {
     return '稳定版本，可作为优先恢复目标'
   }
-  if (version.sourceType === 'ROLLBACK' && version.sourceVersionId) {
-    return `回滚生成版本，恢复自 ${getVersionLabelById(version.sourceVersionId)}`
+  if (version.sourceType === 'ROLLBACK') {
+    return '可作为回滚目标的历史版本'
   }
   if (version.sourceVersionId) {
     return `来源于 ${getVersionLabelById(version.sourceVersionId)}`
@@ -642,6 +639,16 @@ const submitRollback = async () => {
     message.warning('请先选择要回滚到的版本')
     return
   }
+  const targetVersionNo = selectedVersion.value.versionNo
+  const versionsToDelete = versionList.value
+    .filter((item) => (item.versionNo || 0) > (targetVersionNo || 0))
+    .map((item) => `V${item.versionNo}`)
+  const confirmed = window.confirm(
+    `确认回滚到 V${targetVersionNo} 吗？\n\n此操作会永久删除后续版本：${versionsToDelete.join('、') || '无'}\n删除后不可恢复。`,
+  )
+  if (!confirmed) {
+    return
+  }
   rollingBackVersion.value = true
   try {
     const res = await rollbackAppVersion({
@@ -649,7 +656,7 @@ const submitRollback = async () => {
       rollbackReason: rollbackForm.rollbackReason.trim() || undefined,
     })
     if (res.data.code === 0 && res.data.data) {
-      message.success('回滚成功，当前内容已恢复到所选版本')
+      message.success(`回滚成功，当前版本已切换到 V${res.data.data.versionNo}`)
       rollbackForm.rollbackReason = ''
       await fetchVersionList(res.data.data.id)
     } else {
