@@ -15,6 +15,9 @@
           </template>
           应用详情
         </a-button>
+        <a-button v-if="isOwner && appInfo?.id" type="default" @click="goToVersionPage">
+          版本管理
+        </a-button>
         <a-button
             type="primary"
             ghost
@@ -384,6 +387,14 @@ const saveTemplateForm = reactive({
 // 显示应用详情
 const showAppDetail = () => {
   appDetailVisible.value = true
+}
+
+const goToVersionPage = () => {
+  if (!appInfo.value?.id) {
+    message.warning('应用信息还没加载完成')
+    return
+  }
+  router.push(`/app/version/${appInfo.value.id}`)
 }
 
 const openSaveTemplateModal = () => {
