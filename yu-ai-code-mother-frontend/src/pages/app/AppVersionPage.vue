@@ -5,7 +5,7 @@
         <div class="breadcrumb-link" @click="goBackToChat">← 返回应用对话</div>
         <div class="page-title-row">
           <h1>{{ appInfo?.appName || '应用版本管理' }}</h1>
-          <a-tag v-if="selectedVersion?.currentVersion" color="green">当前版本已选中</a-tag>
+          <a-tag v-if="displayVersion?.currentVersion" color="green">当前使用中的版本</a-tag>
           <a-tag v-if="isDemoMode" color="purple">演示态</a-tag>
         </div>
         <p>提交版本、查看版本详情，以及回滚到指定前端版本。</p>
@@ -19,8 +19,12 @@
             <span class="summary-value">{{ versionList.filter((item) => item.isStable).length }}</span>
           </div>
           <div class="summary-card">
-            <span class="summary-label">当前版本</span>
-            <span class="summary-value">{{ selectedVersion?.versionNo ? `V${selectedVersion.versionNo}` : '-' }}</span>
+            <span class="summary-label">当前使用版本</span>
+            <span class="summary-value">{{ currentVersionRecord?.versionNo ? `V${currentVersionRecord.versionNo}` : '-' }}</span>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">当前查看版本</span>
+            <span class="summary-value">{{ displayVersion?.versionNo ? `V${displayVersion.versionNo}` : '-' }}</span>
           </div>
         </div>
       </div>
@@ -44,6 +48,14 @@
             <h3>提交当前版本</h3>
             <span class="panel-title-tip">把当前前端结果保存成可回滚快照</span>
           </div>
+          <a-alert
+            v-if="currentVersionSummary"
+            type="info"
+            show-icon
+            class="commit-hint-alert"
+            :message="currentVersionSummary.title"
+            :description="currentVersionSummary.description"
+          />
           <a-form layout="vertical">
             <a-form-item label="版本标题" required>
               <a-input v-model:value="versionForm.versionTitle" placeholder="比如：首页 banner 改版" />
@@ -110,20 +122,20 @@
         </div>
       </div>
 
-      <a-card v-if="!pageError && selectedVersion" class="version-detail-card">
+      <a-card v-if="!pageError && displayVersion" class="version-detail-card">
         <div class="detail-hero">
           <div>
             <div class="detail-eyebrow">当前查看</div>
             <div class="detail-title-row">
-              <h3>{{ selectedVersion.versionTitle || `V${selectedVersion.versionNo}` }}</h3>
-              <a-tag color="blue">V{{ selectedVersion.versionNo }}</a-tag>
+              <h3>{{ displayVersion.versionTitle || `V${displayVersion.versionNo}` }}</h3>
+              <a-tag color="blue">V{{ displayVersion.versionNo }}</a-tag>
             </div>
             <div class="detail-subtitle">
-              {{ formatSourceType(selectedVersion.sourceType) }}，创建于 {{ formatTime(selectedVersion.createTime) || '-' }}
+              {{ formatSourceType(displayVersion.sourceType) }}，创建于 {{ formatTime(displayVersion.createTime) || '-' }}
             </div>
           </div>
           <div class="detail-tag-row">
-            <a-tag v-for="tag in getVersionTags(selectedVersion)" :key="tag.text" :color="tag.color">{{ tag.text }}</a-tag>
+            <a-tag v-for="tag in getVersionTags(displayVersion)" :key="tag.text" :color="tag.color">{{ tag.text }}</a-tag>
           </div>
         </div>
 
@@ -135,55 +147,55 @@
           <div class="decision-summary-grid">
             <div class="decision-summary-item">
               <span class="decision-summary-label">当前查看版本</span>
-              <span class="decision-summary-value">{{ selectedVersion.versionTitle || `V${selectedVersion.versionNo}` }}</span>
+              <span class="decision-summary-value">{{ displayVersion.versionTitle || `V${displayVersion.versionNo}` }}</span>
             </div>
             <div class="decision-summary-item">
               <span class="decision-summary-label">版本关系</span>
-              <span class="decision-summary-value">{{ getVersionDecisionRelation(selectedVersion) }}</span>
+              <span class="decision-summary-value">{{ getVersionDecisionRelation(displayVersion) }}</span>
             </div>
             <div class="decision-summary-item decision-summary-item-wide">
               <span class="decision-summary-label">恢复提醒</span>
-              <span class="decision-summary-value">恢复后系统会基于这个版本生成一条新的回滚版本，并把它切换为当前版本。</span>
+              <span class="decision-summary-value">恢复后系统会基于这个版本生成一条新的回滚版本，并把它切换为当前使用版本。</span>
             </div>
             <div class="decision-summary-item decision-summary-item-wide">
               <span class="decision-summary-label">版本备注</span>
-              <span class="decision-summary-value">{{ selectedVersion.changeSummary || '当前版本没有填写备注，恢复前请重点核对版本标题、标签与来源关系。' }}</span>
+              <span class="decision-summary-value">{{ displayVersion.changeSummary || '当前查看版本没有填写备注，恢复前请重点核对版本标题、标签与来源关系。' }}</span>
             </div>
           </div>
         </div>
 
         <a-alert
-          v-if="selectedVersion.currentVersion && selectedVersion.sourceType === 'ROLLBACK' && selectedVersion.sourceVersionId"
+          v-if="displayVersion.currentVersion && displayVersion.sourceType === 'ROLLBACK' && displayVersion.sourceVersionId"
           type="success"
           show-icon
           class="rollback-result-alert"
-          :message="`当前已经切换到 ${getVersionLabel(selectedVersion)}，它是一次恢复生成的新版本，恢复自 ${getVersionLabelById(selectedVersion.sourceVersionId)}。`"
+          :message="`当前已经切换到 ${getVersionLabel(displayVersion)}，它是一次恢复生成的新版本，恢复自 ${getVersionLabelById(displayVersion.sourceVersionId)}。`"
         />
 
         <div class="detail-section-card">
           <div class="section-title-row">
             <h4>版本信息</h4>
-            <span>查看当前版本的基础属性与来源关系</span>
+            <span>查看当前选中版本的基础属性与来源关系</span>
           </div>
           <a-descriptions :column="2" bordered size="small">
-          <a-descriptions-item label="版本号">V{{ selectedVersion.versionNo }}</a-descriptions-item>
-          <a-descriptions-item label="状态">{{ selectedVersion.versionStatus || '-' }}</a-descriptions-item>
-          <a-descriptions-item label="标题">{{ selectedVersion.versionTitle || '-' }}</a-descriptions-item>
-          <a-descriptions-item label="父版本">{{ selectedVersion.parentVersionNo || '无' }}</a-descriptions-item>
-          <a-descriptions-item label="生成类型">{{ selectedVersion.codeGenType || '-' }}</a-descriptions-item>
-          <a-descriptions-item label="来源">{{ formatSourceType(selectedVersion.sourceType) }}</a-descriptions-item>
-          <a-descriptions-item label="当前使用中">{{ selectedVersion.currentVersion ? '是' : '否' }}</a-descriptions-item>
-          <a-descriptions-item label="稳定版本">{{ selectedVersion.isStable ? '是' : '否' }}</a-descriptions-item>
+          <a-descriptions-item label="版本号">V{{ displayVersion.versionNo }}</a-descriptions-item>
+          <a-descriptions-item label="状态">{{ displayVersion.versionStatus || '-' }}</a-descriptions-item>
+          <a-descriptions-item label="标题">{{ displayVersion.versionTitle || '-' }}</a-descriptions-item>
+          <a-descriptions-item label="父版本">{{ displayVersion.parentVersionNo || '无' }}</a-descriptions-item>
+          <a-descriptions-item label="生成类型">{{ displayVersion.codeGenType || '-' }}</a-descriptions-item>
+          <a-descriptions-item label="来源">{{ formatSourceType(displayVersion.sourceType) }}</a-descriptions-item>
+          <a-descriptions-item label="当前使用中">{{ displayVersion.currentVersion ? '是' : '否' }}</a-descriptions-item>
+          <a-descriptions-item label="稳定版本">{{ displayVersion.isStable ? '是' : '否' }}</a-descriptions-item>
           <a-descriptions-item label="来源版本" :span="2">
-            {{ selectedVersion.sourceVersionId ? getVersionLabelById(selectedVersion.sourceVersionId) : '无' }}
+            {{ displayVersion.sourceVersionId ? getVersionLabelById(displayVersion.sourceVersionId) : '无' }}
           </a-descriptions-item>
-          <a-descriptions-item v-if="selectedVersion.sourceVersionId && selectedVersion.sourceType === 'ROLLBACK'" label="恢复关系" :span="2">
-            当前版本由回滚生成，恢复自 {{ getVersionLabelById(selectedVersion.sourceVersionId) }}
+          <a-descriptions-item v-if="displayVersion.sourceVersionId && displayVersion.sourceType === 'ROLLBACK'" label="恢复关系" :span="2">
+            当前查看版本由回滚生成，恢复自 {{ getVersionLabelById(displayVersion.sourceVersionId) }}
           </a-descriptions-item>
-          <a-descriptions-item label="版本目录" :span="2">{{ selectedVersion.versionPath || '-' }}</a-descriptions-item>
-          <a-descriptions-item label="Meta 文件" :span="2">{{ selectedVersion.metaPath || '-' }}</a-descriptions-item>
-          <a-descriptions-item label="版本备注" :span="2">{{ selectedVersion.changeSummary || '-' }}</a-descriptions-item>
-          <a-descriptions-item label="用户提示词" :span="2">{{ selectedVersion.userPrompt || '-' }}</a-descriptions-item>
+          <a-descriptions-item label="版本目录" :span="2">{{ displayVersion.versionPath || '-' }}</a-descriptions-item>
+          <a-descriptions-item label="Meta 文件" :span="2">{{ displayVersion.metaPath || '-' }}</a-descriptions-item>
+          <a-descriptions-item label="版本备注" :span="2">{{ displayVersion.changeSummary || '-' }}</a-descriptions-item>
+          <a-descriptions-item label="用户提示词" :span="2">{{ displayVersion.userPrompt || '-' }}</a-descriptions-item>
           </a-descriptions>
         </div>
 
@@ -193,11 +205,11 @@
             <span>记录生成器、分支等辅助元信息</span>
           </div>
           <a-empty
-            v-if="!selectedVersion.metaInfo || Object.keys(selectedVersion.metaInfo).length === 0"
+            v-if="!displayVersion.metaInfo || Object.keys(displayVersion.metaInfo).length === 0"
             description="暂无 meta 信息"
           />
           <a-descriptions v-else :column="1" bordered size="small">
-            <a-descriptions-item v-for="(value, key) in selectedVersion.metaInfo" :key="key" :label="key">
+            <a-descriptions-item v-for="(value, key) in displayVersion.metaInfo" :key="key" :label="key">
               {{ value || '-' }}
             </a-descriptions-item>
           </a-descriptions>
@@ -211,18 +223,27 @@
           <a-alert
             type="info"
             show-icon
-            message="当前版本管理仅保留快照、备注与回滚能力，不展示代码差异。"
+            message="当前版本管理页仅保留快照、备注与回滚能力，不展示代码差异。"
             style="margin-bottom: 12px"
           />
           <a-descriptions :column="1" bordered size="small">
             <a-descriptions-item label="版本备注">
-              {{ selectedVersion.changeSummary || '未填写备注' }}
+              {{ displayVersion.changeSummary || '未填写备注' }}
             </a-descriptions-item>
             <a-descriptions-item label="提交时提示词">
-              {{ selectedVersion.userPrompt || '未记录提示词' }}
+              {{ displayVersion.userPrompt || '未记录提示词' }}
             </a-descriptions-item>
           </a-descriptions>
         </div>
+
+        <a-alert
+          v-if="onlyStable && selectedVersion && !displayVersion"
+          type="info"
+          show-icon
+          style="margin-bottom: 16px"
+          message="当前选中的版本已不在稳定版本筛选结果中"
+          description="你仍然保留了这条版本的内部选中状态，但右侧详情已暂时收起。关闭“只看稳定版本”后，可继续查看它的完整详情。"
+        />
 
         <div class="operation-section-grid rollback-section">
           <div class="operation-card operation-card-safe">
@@ -233,11 +254,11 @@
             <a-alert
               type="success"
               show-icon
-              :message="selectedVersion.isStable ? '这个版本当前已标记为稳定版本。' : '你可以把这个版本标记为稳定版本，方便后续快速识别和恢复。'"
+              :message="displayVersion.isStable ? '这个版本当前已标记为稳定版本。' : '你可以把这个版本标记为稳定版本，方便后续快速识别和恢复。'"
               style="margin-bottom: 12px"
             />
             <a-button :loading="updatingStable" @click="toggleStableVersion">
-              {{ selectedVersion.isStable ? '取消稳定版本' : '标记为稳定版本' }}
+              {{ displayVersion.isStable ? '取消稳定版本' : '标记为稳定版本' }}
             </a-button>
           </div>
 
@@ -425,9 +446,38 @@ const getVersionDecisionRelation = (version?: API.AppFrontendVersionVO) => {
   return '独立提交版本'
 }
 
+const currentVersionRecord = computed(() =>
+  versionList.value.find((item) => item.currentVersion) || selectedVersion.value,
+)
+
+const currentVersionSummary = computed(() => {
+  const currentVersion = currentVersionRecord.value
+  if (!currentVersion?.versionNo) {
+    return {
+      title: '当前还没有可识别的已保存版本',
+      description: '你现在提交这一版后，系统会把当前前端结果保存成第一条可回滚快照。',
+    }
+  }
+  const relation = getVersionDecisionRelation(currentVersion)
+  return {
+    title: `当前正在使用 ${getVersionLabel(currentVersion)}，本次提交会基于它继续生成新的已保存版本。`,
+    description: `${relation}。提交后不会覆盖旧版本，而是新增一条版本记录，方便你后续继续回滚或标记稳定版本。`,
+  }
+})
+
 const filteredVersionList = computed(() => {
   if (!onlyStable.value) return versionList.value
   return versionList.value.filter((item) => !!item.isStable)
+})
+
+const displayVersion = computed(() => {
+  if (!selectedVersion.value) {
+    return undefined
+  }
+  if (!onlyStable.value) {
+    return selectedVersion.value
+  }
+  return filteredVersionList.value.find((item) => item.id === selectedVersion.value?.id)
 })
 
 const resetForms = () => {
@@ -496,7 +546,7 @@ const fetchAppInfo = async () => {
   }
 }
 
-const fetchVersionList = async () => {
+const fetchVersionList = async (preferredVersionId?: number) => {
   if (isDemoMode.value) {
     applyDemoState()
     return
@@ -512,7 +562,7 @@ const fetchVersionList = async () => {
     if (res.data.code === 0 && res.data.data) {
       versionList.value = res.data.data.records || []
       if (versionList.value.length > 0) {
-        const currentSelectedId = selectedVersion.value?.id
+        const currentSelectedId = preferredVersionId || selectedVersion.value?.id
         const targetVersion = currentSelectedId
           ? versionList.value.find((item) => item.id === currentSelectedId) || versionList.value[0]
           : versionList.value[0]
@@ -571,8 +621,7 @@ const submitVersionCommit = async () => {
     if (res.data.code === 0 && res.data.data) {
       message.success('版本提交成功')
       resetForms()
-      await fetchVersionList()
-      selectedVersion.value = res.data.data
+      await fetchVersionList(res.data.data.id)
     } else {
       message.error('版本提交失败：' + res.data.message)
     }
@@ -602,8 +651,7 @@ const submitRollback = async () => {
     if (res.data.code === 0 && res.data.data) {
       message.success('回滚成功，当前内容已恢复到所选版本')
       rollbackForm.rollbackReason = ''
-      await fetchVersionList()
-      selectedVersion.value = res.data.data
+      await fetchVersionList(res.data.data.id)
     } else {
       message.error('回滚失败：' + res.data.message)
     }
@@ -643,8 +691,7 @@ const toggleStableVersion = async () => {
     })
     if (res.data.code === 0 && res.data.data) {
       message.success(nextStable ? '已标记为稳定版本' : '已取消稳定版本')
-      await fetchVersionList()
-      selectedVersion.value = res.data.data
+      await fetchVersionList(res.data.data.id)
     } else {
       message.error('更新稳定版本失败：' + res.data.message)
     }
@@ -808,6 +855,10 @@ onMounted(async () => {
   align-items: flex-start;
   margin-bottom: 12px;
   gap: 12px;
+}
+
+.commit-hint-alert {
+  margin-bottom: 16px;
 }
 
 .version-count {
