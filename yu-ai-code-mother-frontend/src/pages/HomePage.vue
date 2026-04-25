@@ -198,27 +198,45 @@ onMounted(() => {
     <div class="container">
       <!-- 网站标题和描述 -->
       <div class="hero-section">
-        <h1 class="hero-title">言出成站</h1>
-        <p class="hero-description">用AI，重新定义建站：只需一句话</p>
+        <div class="hero-badge">AI 应用搭建工作台</div>
+        <h1 class="hero-title">一句话，生成能继续迭代的网站</h1>
+        <p class="hero-description">
+          从模板起步，到在线对话修改，再到版本管理与发布，整个建站流程都收进同一个工作台里。
+        </p>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <span class="hero-stat-value">一句话</span>
+            <span class="hero-stat-label">创建应用起点</span>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-value">在线对话</span>
+            <span class="hero-stat-label">持续修改页面</span>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-value">版本快照</span>
+            <span class="hero-stat-label">随时回看与恢复</span>
+          </div>
+        </div>
       </div>
 
       <div class="template-entry-card">
-        <div class="template-entry-main">
-          <div>
-            <div class="template-entry-eyebrow">Template Flow</div>
-            <h2>先选模板，或者直接从一句话开始</h2>
-            <p>
-              首页已经接通模板链路。你可以先去模板中心找一个接近的起点，也可以直接输入需求，从空白开始生成。
-            </p>
+        <div class="template-entry-copy">
+          <div class="template-entry-eyebrow">模板市场</div>
+          <h2>需要起点时，再去模板市场挑一个顺手的模板</h2>
+          <p>
+            模板市场更适合“已经知道自己要做什么，但不想从零开始”的场景。首页仍然以直接输入需求为主，模板只是一个可选加速器。
+          </p>
+        </div>
+        <div class="template-entry-side">
+          <div class="template-entry-side-title">你可以这样用</div>
+          <div class="template-entry-tips">
+            <div v-for="tip in templateEntryTips" :key="tip" class="template-entry-tip">
+              {{ tip }}
+            </div>
           </div>
           <div class="template-entry-actions">
-            <a-button type="default" size="large" @click="router.push('/templates')">去模板中心挑模板</a-button>
+            <a-button type="default" size="large" @click="router.push('/templates')">去模板市场看看</a-button>
             <a-button v-if="selectedTemplateId" type="link" @click="clearSelectedTemplate">取消当前模板</a-button>
-          </div>
-        </div>
-        <div class="template-entry-tips">
-          <div v-for="tip in templateEntryTips" :key="tip" class="template-entry-tip">
-            {{ tip }}
           </div>
         </div>
       </div>
@@ -229,10 +247,17 @@ onMounted(() => {
         <span class="selected-template-text">已带入模板起点，现在只需要补充你想新增或修改的要求。</span>
       </div>
       <div class="input-section">
+        <div class="input-section-header">
+          <div>
+            <div class="input-section-title">描述你要做的应用</div>
+            <div class="input-section-subtitle">建议直接写目标用户、页面结构和你想要的风格，生成结果会更稳。</div>
+          </div>
+          <div class="input-section-tag">支持从空白创建，也支持模板增强</div>
+        </div>
         <a-textarea
           v-model:value="userPrompt"
-          :placeholder="selectedTemplateId ? '补充你希望在模板基础上增加或修改的要求' : '帮我创建个人博客网站'"
-          :rows="4"
+          :placeholder="selectedTemplateId ? '补充你希望在模板基础上增加或修改的要求' : '帮我创建一个有首页、文章列表、详情页和后台登录的个人博客网站，风格简洁一点'"
+          :rows="5"
           :maxlength="1000"
           class="prompt-input"
         />
@@ -242,13 +267,15 @@ onMounted(() => {
             <template #icon>
               <span>↑</span>
             </template>
-            {{ selectedTemplateId ? '基于模板创建' : '立即创建' }}
+            {{ selectedTemplateId ? '基于模板创建' : '立即创建应用' }}
           </a-button>
         </div>
       </div>
 
       <!-- 快捷按钮 -->
-      <div class="quick-actions">
+      <div class="quick-actions-wrap">
+        <div class="quick-actions-title">试试这些常见场景</div>
+        <div class="quick-actions">
         <a-button
           type="default"
           @click="
@@ -285,11 +312,18 @@ onMounted(() => {
           "
           >作品展示网站</a-button
         >
+        </div>
       </div>
 
       <!-- 我的作品 -->
-      <div class="section">
-        <h2 class="section-title">我的作品</h2>
+      <div class="section section-card">
+        <div class="section-heading">
+          <div>
+            <div class="section-eyebrow">Workspace</div>
+            <h2 class="section-title">我的作品</h2>
+          </div>
+          <div class="section-extra">继续修改、查看对话或直接打开成品</div>
+        </div>
         <div class="app-grid">
           <AppCard
             v-for="app in myApps"
@@ -312,8 +346,14 @@ onMounted(() => {
       </div>
 
       <!-- 精选案例 -->
-      <div class="section">
-        <h2 class="section-title">精选案例</h2>
+      <div class="section section-card section-card-featured">
+        <div class="section-heading">
+          <div>
+            <div class="section-eyebrow">Showcase</div>
+            <h2 class="section-title">精选案例</h2>
+          </div>
+          <div class="section-extra">看看别人是怎么从一句话走到完整作品的</div>
+        </div>
         <div class="featured-grid">
           <AppCard
             v-for="app in featuredApps"
@@ -346,10 +386,8 @@ onMounted(() => {
   padding: 0;
   min-height: 100vh;
   background:
-    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 8%, #e2e8f0 20%, #cbd5e1 100%),
-    radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.12) 0%, transparent 50%),
-    radial-gradient(circle at 40% 40%, rgba(16, 185, 129, 0.08) 0%, transparent 50%);
+    radial-gradient(circle at top, rgba(59, 130, 246, 0.14) 0%, rgba(59, 130, 246, 0) 38%),
+    linear-gradient(180deg, #f8fbff 0%, #f3f7fc 28%, #eef3f8 100%);
   position: relative;
   overflow: hidden;
 }
@@ -358,68 +396,30 @@ onMounted(() => {
 #homePage::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background-image:
-    linear-gradient(rgba(59, 130, 246, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(59, 130, 246, 0.05) 1px, transparent 1px),
-    linear-gradient(rgba(139, 92, 246, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(139, 92, 246, 0.04) 1px, transparent 1px);
-  background-size:
-    100px 100px,
-    100px 100px,
-    20px 20px,
-    20px 20px;
+    linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.28), transparent 78%);
   pointer-events: none;
-  animation: gridFloat 20s ease-in-out infinite;
 }
 
 /* 动态光效 */
 #homePage::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background:
-    radial-gradient(
-      600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-      rgba(59, 130, 246, 0.08) 0%,
-      rgba(139, 92, 246, 0.06) 40%,
-      transparent 80%
-    ),
-    linear-gradient(45deg, transparent 30%, rgba(59, 130, 246, 0.04) 50%, transparent 70%),
-    linear-gradient(-45deg, transparent 30%, rgba(139, 92, 246, 0.04) 50%, transparent 70%);
+    radial-gradient(520px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(59, 130, 246, 0.08) 0%, transparent 75%),
+    radial-gradient(circle at 85% 18%, rgba(99, 102, 241, 0.08) 0%, transparent 32%);
   pointer-events: none;
-  animation: lightPulse 8s ease-in-out infinite alternate;
-}
-
-@keyframes gridFloat {
-  0%,
-  100% {
-    transform: translate(0, 0);
-  }
-  50% {
-    transform: translate(5px, 5px);
-  }
-}
-
-@keyframes lightPulse {
-  0% {
-    opacity: 0.3;
-  }
-  100% {
-    opacity: 0.7;
-  }
 }
 
 .container {
-  max-width: 1200px;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 32px 24px 72px;
   position: relative;
   z-index: 2;
   width: 100%;
@@ -430,80 +430,94 @@ onMounted(() => {
 
 /* 英雄区域 */
 .hero-section {
-  text-align: center;
-  padding: 80px 0 60px;
-  margin-bottom: 28px;
+  max-width: 980px;
+  margin: 0 auto 32px;
+  padding: 72px 32px 48px;
   color: #1e293b;
   position: relative;
   overflow: hidden;
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(16px);
+  text-align: center;
 }
 
 .hero-section::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background:
-    radial-gradient(ellipse 800px 400px at center, rgba(59, 130, 246, 0.12) 0%, transparent 70%),
-    linear-gradient(45deg, transparent 30%, rgba(139, 92, 246, 0.05) 50%, transparent 70%),
-    linear-gradient(-45deg, transparent 30%, rgba(16, 185, 129, 0.04) 50%, transparent 70%);
-  animation: heroGlow 10s ease-in-out infinite alternate;
+  inset: 0;
+  background: radial-gradient(circle at top, rgba(59, 130, 246, 0.14) 0%, transparent 52%);
+  pointer-events: none;
 }
 
-@keyframes heroGlow {
-  0% {
-    opacity: 0.6;
-    transform: scale(1);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1.02);
-  }
-}
-
-@keyframes rotate {
-  0% {
-    transform: translate(-50%, -50%) rotate(0deg);
-  }
-  100% {
-    transform: translate(-50%, -50%) rotate(360deg);
-  }
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.16);
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 18px;
+  position: relative;
+  z-index: 1;
 }
 
 .hero-title {
-  font-size: 56px;
+  font-size: 54px;
   font-weight: 700;
-  margin: 0 0 20px;
-  line-height: 1.2;
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #10b981 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: -1px;
+  margin: 0 0 18px;
+  line-height: 1.12;
+  color: #0f172a;
+  letter-spacing: -0.03em;
   position: relative;
-  z-index: 2;
-  animation: titleShimmer 3s ease-in-out infinite;
-}
-
-@keyframes titleShimmer {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
+  z-index: 1;
 }
 
 .hero-description {
-  font-size: 20px;
-  margin: 0;
-  opacity: 0.8;
-  color: #64748b;
+  max-width: 720px;
+  margin: 0 auto;
+  font-size: 18px;
+  line-height: 1.8;
+  color: #475569;
   position: relative;
-  z-index: 2;
+  z-index: 1;
+}
+
+.hero-stats {
+  margin-top: 28px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-stat {
+  padding: 18px 16px;
+  border-radius: 20px;
+  background: rgba(248, 250, 252, 0.92);
+  border: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.hero-stat-value {
+  display: block;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.hero-stat-label {
+  display: block;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 /* 模板入口 */
@@ -511,60 +525,77 @@ onMounted(() => {
   max-width: 980px;
   margin: 0 auto 20px;
   padding: 22px 24px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.06);
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.9fr);
+  gap: 20px;
+  align-items: stretch;
 }
 
-.template-entry-main {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: flex-start;
+.template-entry-copy {
+  padding: 8px 4px;
 }
 
 .template-entry-eyebrow {
-  color: #3b82f6;
+  color: #2563eb;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .template-entry-card h2 {
-  margin: 0 0 10px;
-  font-size: 28px;
+  margin: 0 0 12px;
+  font-size: 24px;
+  line-height: 1.4;
   color: #0f172a;
 }
 
 .template-entry-card p {
   margin: 0;
   color: #64748b;
-  line-height: 1.7;
-  max-width: 720px;
+  line-height: 1.8;
+  max-width: 560px;
+  font-size: 14px;
+}
+
+.template-entry-side {
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(248, 250, 252, 0.88);
+  border: 1px solid #e2e8f0;
+}
+
+.template-entry-side-title {
+  margin-bottom: 12px;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .template-entry-actions {
+  margin-top: 14px;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .template-entry-tips {
-  margin-top: 18px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: 1fr;
+  gap: 10px;
 }
 
 .template-entry-tip {
   padding: 12px 14px;
   border-radius: 16px;
-  background: rgba(248, 250, 252, 0.92);
+  background: #ffffff;
   border: 1px solid #e2e8f0;
   color: #475569;
   font-size: 13px;
@@ -589,36 +620,83 @@ onMounted(() => {
 
 .input-section {
   position: relative;
-  margin: 0 auto 24px;
-  max-width: 800px;
+  margin: 0 auto 28px;
+  max-width: 920px;
+  padding: 24px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.input-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.input-section-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.input-section-subtitle {
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.input-section-tag {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .prompt-input {
-  border-radius: 16px;
-  border: none;
+  border-radius: 22px;
+  border: 1px solid #dbe4f0;
   font-size: 16px;
-  padding: 20px 60px 20px 20px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  padding: 20px 22px;
+  background: #fcfdff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .prompt-input:focus {
-  background: rgba(255, 255, 255, 1);
-  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
-  transform: translateY(-2px);
+  background: #ffffff;
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
 }
 
 .input-actions {
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
+  margin-top: 16px;
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
+  justify-content: flex-end;
 }
 
 /* 快捷按钮 */
+.quick-actions-wrap {
+  max-width: 980px;
+  margin: 0 auto 36px;
+}
+
+.quick-actions-title {
+  margin-bottom: 14px;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .quick-actions {
   display: flex;
   gap: 12px;
@@ -665,14 +743,48 @@ onMounted(() => {
 
 /* 区域标题 */
 .section {
-  margin-bottom: 60px;
+  margin-bottom: 28px;
+}
+
+.section-card {
+  padding: 28px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.08);
+}
+
+.section-card-featured {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 250, 252, 0.96) 100%);
+}
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-end;
+  margin-bottom: 24px;
+}
+
+.section-eyebrow {
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
 }
 
 .section-title {
-  font-size: 32px;
-  font-weight: 600;
-  margin-bottom: 32px;
-  color: #1e293b;
+  font-size: 30px;
+  font-weight: 700;
+  margin: 0;
+  color: #0f172a;
+}
+
+.section-extra {
+  color: #64748b;
+  font-size: 14px;
 }
 
 /* 我的作品网格 */
@@ -700,29 +812,53 @@ onMounted(() => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
+  .container {
+    padding: 20px 16px 56px;
+  }
+
+  .hero-section {
+    padding: 48px 20px 28px;
+    border-radius: 24px;
+  }
+
   .hero-title {
-    font-size: 32px;
+    font-size: 34px;
   }
 
   .hero-description {
     font-size: 16px;
   }
 
-  .template-entry-main {
+  .hero-stats,
+  .template-entry-tips {
+    grid-template-columns: 1fr;
+  }
+
+  .input-section-header,
+  .section-heading,
+  .template-entry-card {
     flex-direction: column;
   }
 
-  .template-entry-actions {
-    align-items: flex-start;
+  .template-entry-card {
+    grid-template-columns: 1fr;
   }
 
-  .template-entry-tips {
-    grid-template-columns: 1fr;
+  .template-entry-actions,
+  .input-actions {
+    align-items: stretch;
+    justify-content: flex-start;
   }
 
   .selected-template-bar {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .input-section,
+  .section-card {
+    padding: 20px;
+    border-radius: 22px;
   }
 
   .app-grid,

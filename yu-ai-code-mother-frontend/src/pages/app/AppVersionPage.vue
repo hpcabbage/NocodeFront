@@ -3,12 +3,13 @@
     <div class="page-header">
       <div class="page-header-main">
         <div class="breadcrumb-link" @click="goBackToChat">← 返回应用对话</div>
+        <div class="page-header-eyebrow">Version Workspace</div>
         <div class="page-title-row">
           <h1>{{ appInfo?.appName || '应用版本管理' }}</h1>
           <a-tag v-if="displayVersion?.currentVersion" color="green">当前使用中的版本</a-tag>
           <a-tag v-if="isDemoMode" color="purple">演示态</a-tag>
         </div>
-        <p>提交版本、查看版本详情，以及回滚到指定前端版本。</p>
+        <p>把每次前端结果保存成可回看的快照，确认当前查看版本，再决定是否恢复。</p>
         <div class="page-header-summary">
           <div class="summary-card">
             <span class="summary-label">版本总数</span>
@@ -45,7 +46,10 @@
       <div v-if="!pageError" class="version-page-layout">
         <div class="version-panel version-panel-form">
           <div class="panel-title-row">
-            <h3>提交当前版本</h3>
+            <div>
+              <div class="panel-eyebrow">Commit Snapshot</div>
+              <h3>提交当前版本</h3>
+            </div>
             <span class="panel-title-tip">把当前前端结果保存成可回滚快照</span>
           </div>
           <a-alert
@@ -83,6 +87,7 @@
         <div class="version-panel version-panel-list">
           <div class="version-list-header">
             <div>
+              <div class="panel-eyebrow">Snapshots</div>
               <h3>版本列表</h3>
               <div class="version-list-subtitle">按时间倒序查看当前有效版本、稳定版本与历史快照</div>
             </div>
@@ -124,7 +129,7 @@
 
       <a-card v-if="!pageError && displayVersion" class="version-detail-card">
         <div class="detail-hero">
-          <div>
+          <div class="detail-hero-main">
             <div class="detail-eyebrow">当前查看</div>
             <div class="detail-title-row">
               <h3>{{ displayVersion.versionTitle || `V${displayVersion.versionNo}` }}</h3>
@@ -134,8 +139,11 @@
               {{ formatSourceType(displayVersion.sourceType) }}，创建于 {{ formatTime(displayVersion.createTime) || '-' }}
             </div>
           </div>
-          <div class="detail-tag-row">
-            <a-tag v-for="tag in getVersionTags(displayVersion)" :key="tag.text" :color="tag.color">{{ tag.text }}</a-tag>
+          <div class="detail-hero-side">
+            <div class="detail-tag-row">
+              <a-tag v-for="tag in getVersionTags(displayVersion)" :key="tag.text" :color="tag.color">{{ tag.text }}</a-tag>
+            </div>
+            <div class="detail-hero-hint">先看标签和版本关系，再决定是否标记稳定版本或执行回滚。</div>
           </div>
         </div>
 
@@ -264,13 +272,11 @@
               <h4>回滚到当前版本</h4>
               <span>会覆盖当前应用输出，并删除这个版本之后的所有版本</span>
             </div>
-            <a-alert
-              type="warning"
-              show-icon
-              message="回滚后会覆盖当前应用输出，并永久删除这个版本之后的所有版本。"
-              style="margin-bottom: 12px"
-            />
-            <div class="rollback-action-tip">这是高风险操作。删除后续版本后，版本号会从当前目标版本继续重新开始。</div>
+            <div class="rollback-warning-banner">
+              <div class="rollback-warning-title">高风险操作</div>
+              <div class="rollback-warning-text">回滚后会覆盖当前应用输出，并永久删除这个版本之后的所有版本。</div>
+            </div>
+            <div class="rollback-action-tip">删除后续版本后，版本号会从当前目标版本继续重新开始，适合在确认当前版本可用后再执行。</div>
             <a-form layout="vertical">
               <a-form-item label="回滚说明（可选)">
                 <a-textarea
@@ -736,8 +742,10 @@ onMounted(async () => {
 <style scoped>
 .app-version-page {
   min-height: 100vh;
-  padding: 24px;
-  background: #f7f8fa;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 28px 20px 56px;
+  background: #f5f7fb;
 }
 
 .page-header {
@@ -745,16 +753,24 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: flex-start;
   gap: 20px;
-  margin-bottom: 20px;
-  padding: 24px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, #ffffff 0%, #f3f7ff 100%);
-  border: 1px solid #edf2ff;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  margin-bottom: 22px;
+  padding: 28px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 48%, #2563eb 100%);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
 }
 
 .page-header-main {
   flex: 1;
+}
+
+.page-header-eyebrow {
+  margin-bottom: 10px;
+  color: rgba(191, 219, 254, 0.96);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .page-title-row {
@@ -766,14 +782,15 @@ onMounted(async () => {
 
 .page-header h1 {
   margin: 8px 0;
-  font-size: 30px;
-  color: #1f1f1f;
+  font-size: 32px;
+  color: #ffffff;
 }
 
 .page-header p {
   margin: 0;
-  color: #666;
+  color: rgba(255, 255, 255, 0.78);
   font-size: 14px;
+  line-height: 1.7;
 }
 
 .page-header-summary {
@@ -786,36 +803,41 @@ onMounted(async () => {
 
 .summary-card {
   padding: 14px 16px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid #eef2ff;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(8px);
 }
 
 .summary-label {
   display: block;
   font-size: 12px;
-  color: #8c8c8c;
+  color: rgba(255, 255, 255, 0.72);
   margin-bottom: 6px;
 }
 
 .summary-value {
   font-size: 20px;
   font-weight: 700;
-  color: #1f1f1f;
+  color: #ffffff;
 }
 
 .breadcrumb-link {
-  color: #1677ff;
+  color: rgba(191, 219, 254, 0.96);
   cursor: pointer;
 }
 
 .header-actions {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .page-card {
-  border-radius: 16px;
+  border-radius: 28px;
+  border: 1px solid #e7eef8;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .version-page-layout {
@@ -826,11 +848,11 @@ onMounted(async () => {
 }
 
 .version-panel {
-  border: 1px solid #eef2f6;
-  border-radius: 18px;
-  padding: 18px;
-  background: #ffffff;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+  border: 1px solid #e9eef5;
+  border-radius: 24px;
+  padding: 22px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .version-panel-form {
@@ -848,6 +870,19 @@ onMounted(async () => {
 
 .panel-title-row {
   margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.panel-eyebrow {
+  margin-bottom: 6px;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .panel-title-tip,
@@ -894,13 +929,14 @@ onMounted(async () => {
 .version-list-item {
   position: relative;
   border: 1px solid #edf2f7;
-  border-radius: 14px;
-  padding: 14px 14px 14px 18px;
-  background: #fff;
+  border-radius: 18px;
+  padding: 16px 16px 16px 20px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
   cursor: pointer;
   margin-bottom: 12px;
   transition: all 0.2s ease;
   overflow: hidden;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
 }
 
 .version-list-item-accent {
@@ -916,7 +952,8 @@ onMounted(async () => {
 .version-list-item:hover,
 .version-list-item.active {
   border-color: #1677ff;
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.08);
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.08), 0 14px 30px rgba(37, 99, 235, 0.08);
+  transform: translateY(-1px);
 }
 
 .version-list-item.current {
@@ -951,9 +988,10 @@ onMounted(async () => {
 }
 
 .version-summary {
-  color: #666;
+  color: #475569;
   font-size: 13px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  line-height: 1.7;
 }
 
 .version-source-text {
@@ -969,19 +1007,38 @@ onMounted(async () => {
 
 .version-detail-card {
   margin-top: 8px;
-  border-radius: 20px;
+  border-radius: 24px;
 }
 
 .detail-hero {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
-  align-items: flex-start;
-  padding: 20px;
-  border-radius: 18px;
+  gap: 18px;
+  align-items: stretch;
+  padding: 22px;
+  border-radius: 22px;
   background: linear-gradient(135deg, #ffffff 0%, #f6faff 100%);
   border: 1px solid #edf2ff;
   margin-bottom: 16px;
+}
+
+.detail-hero-main {
+  flex: 1;
+}
+
+.detail-hero-side {
+  width: 260px;
+  flex-shrink: 0;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.92);
+  border: 1px solid #e2e8f0;
+}
+
+.detail-hero-hint {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.7;
 }
 
 .detail-eyebrow {
@@ -1015,8 +1072,8 @@ onMounted(async () => {
 
 .detail-section-card {
   margin-top: 16px;
-  padding: 18px;
-  border-radius: 18px;
+  padding: 20px;
+  border-radius: 22px;
   border: 1px solid #eef2f6;
   background: #ffffff;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
@@ -1024,8 +1081,8 @@ onMounted(async () => {
 
 .decision-summary-card {
   margin-top: 16px;
-  padding: 18px;
-  border-radius: 18px;
+  padding: 20px;
+  border-radius: 22px;
   border: 1px solid #e6f4ff;
   background: linear-gradient(180deg, #f8fcff 0%, #ffffff 100%);
 }
@@ -1114,14 +1171,36 @@ onMounted(async () => {
 }
 
 .operation-card-warning {
-  background: linear-gradient(180deg, #ffffff 0%, #fffaf0 100%);
+  background: linear-gradient(180deg, #fffdf8 0%, #fff6e8 100%);
+  border-color: #f6d7a8;
+}
+
+.rollback-warning-banner {
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 243, 205, 0.72);
+  border: 1px solid #f7c97c;
+}
+
+.rollback-warning-title {
+  margin-bottom: 6px;
+  color: #ad4e00;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.rollback-warning-text {
+  color: #7c2d12;
+  font-size: 13px;
+  line-height: 1.7;
 }
 
 .rollback-action-tip {
   margin-bottom: 12px;
   color: #8c8c8c;
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 @media (max-width: 960px) {
@@ -1147,6 +1226,10 @@ onMounted(async () => {
   .detail-hero,
   .section-title-row {
     flex-direction: column;
+  }
+
+  .detail-hero-side {
+    width: 100%;
   }
 }
 </style>
